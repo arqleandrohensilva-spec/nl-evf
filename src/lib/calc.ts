@@ -105,10 +105,10 @@ export function curvaABC(itens: Item[]) {
   let acc = 0;
   const out = rows.map((r) => {
     const pct = soma ? (r.total / soma) * 100 : 0;
-    const antes = acc;
+    const primeiro = acc === 0;
     acc += pct;
-    // classe pela posição acumulada antes de somar o item (o item que cruza o corte entra na classe)
-    const classe = antes < 80 ? "A" : antes < 95 ? "B" : "C";
+    const a = Math.round(acc * 1e6) / 1e6;
+    const classe = a <= 80 || primeiro ? "A" : a <= 95 ? "B" : "C";
     return { ...r, pct, acum: acc, classe };
   });
   const nA = out.filter((r) => r.classe === "A").length;
