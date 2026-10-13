@@ -3,7 +3,11 @@ const n2 = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFra
 
 export const fmtR = (v: number) => brl.format(Number.isFinite(v) ? v : 0);
 export const fmtN = (v: number, d = 2) =>
-  d === 2 ? n2.format(v || 0) : new Intl.NumberFormat("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }).format(v || 0);
+  d === 2
+    ? n2.format(v || 0)
+    : new Intl.NumberFormat("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }).format(
+        v || 0,
+      );
 export const fmtM2 = (v: number) => `${n2.format(v || 0)} m²`;
 export const fmtPct = (v: number, d = 1) => `${fmtN(v, d)}%`;
 export const fmtData = (d?: string | null) => {

@@ -12,7 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedEvfsRouteImport } from './routes/_authenticated/evfs'
+import { Route as AuthenticatedBaseCatalogoRouteImport } from './routes/_authenticated/base/catalogo'
+import { Route as AuthenticatedBaseConfiguracoesRouteImport } from './routes/_authenticated/base/configuracoes'
+import { Route as AuthenticatedBaseFornecedoresRouteImport } from './routes/_authenticated/base/fornecedores'
+import { Route as AuthenticatedBaseTaxasRouteImport } from './routes/_authenticated/base/taxas'
+import { Route as AuthenticatedEvfsIndexRouteImport } from './routes/_authenticated/evfs/index'
+import { Route as AuthenticatedEvfsIdRouteImport } from './routes/_authenticated/evfs/$id'
+import { Route as AuthenticatedImprimirIdRouteImport } from './routes/_authenticated/imprimir.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +34,115 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedEvfsRoute = AuthenticatedEvfsRouteImport.update({
-  id: '/evfs',
-  path: '/evfs',
+const AuthenticatedBaseCatalogoRoute =
+  AuthenticatedBaseCatalogoRouteImport.update({
+    id: '/base/catalogo',
+    path: '/base/catalogo',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedBaseConfiguracoesRoute =
+  AuthenticatedBaseConfiguracoesRouteImport.update({
+    id: '/base/configuracoes',
+    path: '/base/configuracoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedBaseFornecedoresRoute =
+  AuthenticatedBaseFornecedoresRouteImport.update({
+    id: '/base/fornecedores',
+    path: '/base/fornecedores',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedBaseTaxasRoute = AuthenticatedBaseTaxasRouteImport.update({
+  id: '/base/taxas',
+  path: '/base/taxas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEvfsIndexRoute = AuthenticatedEvfsIndexRouteImport.update({
+  id: '/evfs/',
+  path: '/evfs/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEvfsIdRoute = AuthenticatedEvfsIdRouteImport.update({
+  id: '/evfs/$id',
+  path: '/evfs/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedImprimirIdRoute = AuthenticatedImprimirIdRouteImport.update({
+  id: '/imprimir/$id',
+  path: '/imprimir/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/evfs': typeof AuthenticatedEvfsRoute
+  '/base/catalogo': typeof AuthenticatedBaseCatalogoRoute
+  '/base/configuracoes': typeof AuthenticatedBaseConfiguracoesRoute
+  '/base/fornecedores': typeof AuthenticatedBaseFornecedoresRoute
+  '/base/taxas': typeof AuthenticatedBaseTaxasRoute
+  '/evfs/$id': typeof AuthenticatedEvfsIdRoute
+  '/imprimir/$id': typeof AuthenticatedImprimirIdRoute
+  '/evfs/': typeof AuthenticatedEvfsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/evfs': typeof AuthenticatedEvfsRoute
+  '/base/catalogo': typeof AuthenticatedBaseCatalogoRoute
+  '/base/configuracoes': typeof AuthenticatedBaseConfiguracoesRoute
+  '/base/fornecedores': typeof AuthenticatedBaseFornecedoresRoute
+  '/base/taxas': typeof AuthenticatedBaseTaxasRoute
+  '/evfs/$id': typeof AuthenticatedEvfsIdRoute
+  '/imprimir/$id': typeof AuthenticatedImprimirIdRoute
+  '/evfs': typeof AuthenticatedEvfsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/evfs': typeof AuthenticatedEvfsRoute
+  '/_authenticated/base/catalogo': typeof AuthenticatedBaseCatalogoRoute
+  '/_authenticated/base/configuracoes': typeof AuthenticatedBaseConfiguracoesRoute
+  '/_authenticated/base/fornecedores': typeof AuthenticatedBaseFornecedoresRoute
+  '/_authenticated/base/taxas': typeof AuthenticatedBaseTaxasRoute
+  '/_authenticated/evfs/$id': typeof AuthenticatedEvfsIdRoute
+  '/_authenticated/imprimir/$id': typeof AuthenticatedImprimirIdRoute
+  '/_authenticated/evfs/': typeof AuthenticatedEvfsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/evfs'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/base/catalogo'
+    | '/base/configuracoes'
+    | '/base/fornecedores'
+    | '/base/taxas'
+    | '/evfs/$id'
+    | '/imprimir/$id'
+    | '/evfs/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/evfs'
-  id: '__root__' | '/' | '/_authenticated' | '/auth' | '/_authenticated/evfs'
+  to:
+    | '/'
+    | '/auth'
+    | '/base/catalogo'
+    | '/base/configuracoes'
+    | '/base/fornecedores'
+    | '/base/taxas'
+    | '/evfs/$id'
+    | '/imprimir/$id'
+    | '/evfs'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/base/catalogo'
+    | '/_authenticated/base/configuracoes'
+    | '/_authenticated/base/fornecedores'
+    | '/_authenticated/base/taxas'
+    | '/_authenticated/evfs/$id'
+    | '/_authenticated/imprimir/$id'
+    | '/_authenticated/evfs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -88,22 +174,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/evfs': {
-      id: '/_authenticated/evfs'
+    '/_authenticated/base/catalogo': {
+      id: '/_authenticated/base/catalogo'
+      path: '/base/catalogo'
+      fullPath: '/base/catalogo'
+      preLoaderRoute: typeof AuthenticatedBaseCatalogoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/base/configuracoes': {
+      id: '/_authenticated/base/configuracoes'
+      path: '/base/configuracoes'
+      fullPath: '/base/configuracoes'
+      preLoaderRoute: typeof AuthenticatedBaseConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/base/fornecedores': {
+      id: '/_authenticated/base/fornecedores'
+      path: '/base/fornecedores'
+      fullPath: '/base/fornecedores'
+      preLoaderRoute: typeof AuthenticatedBaseFornecedoresRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/base/taxas': {
+      id: '/_authenticated/base/taxas'
+      path: '/base/taxas'
+      fullPath: '/base/taxas'
+      preLoaderRoute: typeof AuthenticatedBaseTaxasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/evfs/': {
+      id: '/_authenticated/evfs/'
       path: '/evfs'
-      fullPath: '/evfs'
-      preLoaderRoute: typeof AuthenticatedEvfsRouteImport
+      fullPath: '/evfs/'
+      preLoaderRoute: typeof AuthenticatedEvfsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/evfs/$id': {
+      id: '/_authenticated/evfs/$id'
+      path: '/evfs/$id'
+      fullPath: '/evfs/$id'
+      preLoaderRoute: typeof AuthenticatedEvfsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/imprimir/$id': {
+      id: '/_authenticated/imprimir/$id'
+      path: '/imprimir/$id'
+      fullPath: '/imprimir/$id'
+      preLoaderRoute: typeof AuthenticatedImprimirIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedEvfsRoute: typeof AuthenticatedEvfsRoute
+  AuthenticatedBaseCatalogoRoute: typeof AuthenticatedBaseCatalogoRoute
+  AuthenticatedBaseConfiguracoesRoute: typeof AuthenticatedBaseConfiguracoesRoute
+  AuthenticatedBaseFornecedoresRoute: typeof AuthenticatedBaseFornecedoresRoute
+  AuthenticatedBaseTaxasRoute: typeof AuthenticatedBaseTaxasRoute
+  AuthenticatedEvfsIdRoute: typeof AuthenticatedEvfsIdRoute
+  AuthenticatedImprimirIdRoute: typeof AuthenticatedImprimirIdRoute
+  AuthenticatedEvfsIndexRoute: typeof AuthenticatedEvfsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedEvfsRoute: AuthenticatedEvfsRoute,
+  AuthenticatedBaseCatalogoRoute: AuthenticatedBaseCatalogoRoute,
+  AuthenticatedBaseConfiguracoesRoute: AuthenticatedBaseConfiguracoesRoute,
+  AuthenticatedBaseFornecedoresRoute: AuthenticatedBaseFornecedoresRoute,
+  AuthenticatedBaseTaxasRoute: AuthenticatedBaseTaxasRoute,
+  AuthenticatedEvfsIdRoute: AuthenticatedEvfsIdRoute,
+  AuthenticatedImprimirIdRoute: AuthenticatedImprimirIdRoute,
+  AuthenticatedEvfsIndexRoute: AuthenticatedEvfsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

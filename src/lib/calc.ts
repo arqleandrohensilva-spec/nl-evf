@@ -37,7 +37,12 @@ export function compareCodigo(a: string, b: string) {
 }
 
 export function sortItens(itens: Item[]) {
-  return [...itens].sort((a, b) => a.capitulo_codigo - b.capitulo_codigo || a.ordem - b.ordem || compareCodigo(a.codigo, b.codigo));
+  return [...itens].sort(
+    (a, b) =>
+      a.capitulo_codigo - b.capitulo_codigo ||
+      a.ordem - b.ordem ||
+      compareCodigo(a.codigo, b.codigo),
+  );
 }
 
 export interface CapResumo {
@@ -83,24 +88,35 @@ export function resumo(itens: Item[], caps: Capitulo[]) {
   const taxas = capitulos.reduce((s, c) => s + c.taxa, 0);
   const mat = capitulos.reduce((s, c) => s + c.mat, 0);
   const mo = capitulos.reduce((s, c) => s + c.mo, 0);
-  return { capitulos, direto, taxas, mat, mo, geral: direto + taxas, taxaEfetiva: direto ? (taxas / direto) * 100 : 0 };
+  return {
+    capitulos,
+    direto,
+    taxas,
+    mat,
+    mo,
+    geral: direto + taxas,
+    taxaEfetiva: direto ? (taxas / direto) * 100 : 0,
+  };
 }
 
-/** Total geral de um item incluindo a taxa do seu capítulo. */
+/** Soma por etapa (Agora × Etapa futura), com e sem a taxa do capítulo. */
 export function porEtapa(itens: Item[], caps: Capitulo[]) {
-  const out: Record<string, { direto: number; geral: number }> = { Agora: { direto: 0, geral: 0 }, "Etapa futura": { direto: 0, geral: 0 } };
+  const agora = { direto: 0, geral: 0 };
+  const futura = { direto: 0, geral: 0 };
   for (const i of itens) {
     const cap = caps.find((c) => c.codigo === i.capitulo_codigo);
     const t = itemTotais(i).total;
-    const k = i.etapa === "Etapa futura" ? "Etapa futura" : "Agora";
-    out[k].direto += t;
-    out[k].geral += t * (1 + n(cap?.taxa_adm_pct) / 100);
+    const alvo = i.etapa === "Etapa futura" ? futura : agora;
+    alvo.direto += t;
+    alvo.geral += t * (1 + n(cap?.taxa_adm_pct) / 100);
   }
-  return out;
+  return { agora, futura };
 }
 
 export function curvaABC(itens: Item[]) {
-  const rows = itens.map((i) => ({ item: i, total: itemTotais(i).total })).sort((a, b) => b.total - a.total);
+  const rows = itens
+    .map((i) => ({ item: i, total: itemTotais(i).total }))
+    .sort((a, b) => b.total - a.total);
   const soma = rows.reduce((s, r) => s + r.total, 0);
   let acc = 0;
   const out = rows.map((r) => {
@@ -130,14 +146,19 @@ export function totalMedicao(m: Medicao) {
 export function proximaRevisao(rev: string) {
   const m = rev.match(/^(.*?)(\d+)$/);
   if (!m) return rev + "1";
-  const num = String(Number(m[2]) + 1).padStart(m[2].length, "0");
-  return m[1] + num;
+  const digitos = m[2] ?? "0";
+  const num = String(Number(digitos) + 1).padStart(digitos.length, "0");
+  return (m[1] ?? "") + num;
 }
 
 export function mesesDesde(d: string) {
   const a = new Date(d + "T00:00:00");
   const b = new Date();
-  return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()) - (b.getDate() < a.getDate() ? 1 : 0);
+  return (
+    (b.getFullYear() - a.getFullYear()) * 12 +
+    (b.getMonth() - a.getMonth()) -
+    (b.getDate() < a.getDate() ? 1 : 0)
+  );
 }
 
 export interface Alerta {
@@ -159,10 +180,18 @@ export function auditar(evf: Evf, itens: Item[], caps: Capitulo[], cotacoes: Cot
     if (i.tipo_preco === "cotacao") {
       const nc = cotacoes.filter((c) => c.item_id === i.id && Number(c.valor) > 0).length;
       if (nc < 3)
-        out.push({ nivel: "medio", titulo: `${i.codigo} ${i.descricao}: só ${nc} cotação(ões)`, detalhe: "Itens por cotação devem ter 3 propostas para comparação." });
+        out.push({
+          nivel: "medio",
+          titulo: `${i.codigo} ${i.descricao}: só ${nc} cotação(ões)`,
+          detalhe: "Itens por cotação devem ter 3 propostas para comparação.",
+        });
     }
     if (itemTotais(i).total === 0)
-      out.push({ nivel: "medio", titulo: `${i.codigo} ${i.descricao}: total zero`, detalhe: "Verifique quantidade e preços unitários." });
+      out.push({
+        nivel: "medio",
+        titulo: `${i.codigo} ${i.descricao}: total zero`,
+        detalhe: "Verifique quantidade e preços unitários.",
+      });
   }
   const demo = caps.find((c) => /demoli/i.test(c.nome));
   if (demo) {
@@ -180,7 +209,11 @@ export function auditar(evf: Evf, itens: Item[], caps: Capitulo[], cotacoes: Cot
   for (const c of usados) {
     const cap = caps.find((x) => x.codigo === c);
     if (!cap || cap.taxa_adm_pct == null)
-      out.push({ nivel: "medio", titulo: `Capítulo ${c} sem taxa de administração`, detalhe: "Defina a taxa em Taxas de administração." });
+      out.push({
+        nivel: "medio",
+        titulo: `Capítulo ${c} sem taxa de administração`,
+        detalhe: "Defina a taxa em Taxas de administração.",
+      });
   }
   return out;
 }

@@ -10,7 +10,10 @@ export const Route = createFileRoute("/auth")({
       { title: "Entrar — NL · EVF" },
       { name: "description", content: "Acesso dos sócios ao sistema de EVF da NL Arquitetos." },
       { property: "og:title", content: "Entrar — NL · EVF" },
-      { property: "og:description", content: "Acesso dos sócios ao sistema de EVF da NL Arquitetos." },
+      {
+        property: "og:description",
+        content: "Acesso dos sócios ao sistema de EVF da NL Arquitetos.",
+      },
     ],
   }),
   component: AuthPage,
@@ -29,12 +32,22 @@ function AuthPage() {
     if (modo === "entrar") {
       const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
       setBusy(false);
-      if (error) return toast.error("E-mail ou senha inválidos.");
+      if (error) {
+        toast.error("E-mail ou senha inválidos.");
+        return;
+      }
       nav({ to: "/evfs" });
     } else {
-      const { error } = await supabase.auth.signUp({ email, password: senha, options: { emailRedirectTo: window.location.origin } });
+      const { error } = await supabase.auth.signUp({
+        email,
+        password: senha,
+        options: { emailRedirectTo: window.location.origin },
+      });
       setBusy(false);
-      if (error) return toast.error(error.message);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
       toast.success("Conta criada. Confirme pelo link enviado ao seu e-mail.");
       setModo("entrar");
     }
@@ -50,16 +63,33 @@ function AuthPage() {
         </div>
         <label className="block text-sm">
           E-mail
-          <input className="field mt-1" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input
+            className="field mt-1"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
         </label>
         <label className="block text-sm">
           Senha
-          <input className="field mt-1" type="password" required minLength={6} value={senha} onChange={(e) => setSenha(e.target.value)} />
+          <input
+            className="field mt-1"
+            type="password"
+            required
+            minLength={6}
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+          />
         </label>
         <Button className="w-full" disabled={busy}>
           {modo === "entrar" ? "Entrar" : "Criar conta"}
         </Button>
-        <button type="button" className="w-full text-sm text-muted-foreground underline" onClick={() => setModo(modo === "entrar" ? "criar" : "entrar")}>
+        <button
+          type="button"
+          className="w-full text-sm text-muted-foreground underline"
+          onClick={() => setModo(modo === "entrar" ? "criar" : "entrar")}
+        >
           {modo === "entrar" ? "Primeiro acesso? Criar conta" : "Já tenho conta"}
         </button>
       </form>
