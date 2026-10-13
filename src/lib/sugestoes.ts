@@ -7,7 +7,7 @@ import {
   type Base,
   type ItemModelo,
 } from "@/lib/biblioteca";
-import { totalMedicao, type Ambiente, type Evf, type Item, type Medicao } from "@/lib/calc";
+import { efeitoMedicao, type Ambiente, type Evf, type Item, type Medicao } from "@/lib/calc";
 
 const n = (v: unknown) => Number(v) || 0;
 
@@ -29,15 +29,28 @@ export function geometria(a: Ambiente, medicoes: Medicao[]): Geometria {
   const l = n(a.largura);
   const pd = n(a.pe_direito);
   const perimetro = c && l ? 2 * (c + l) : 0;
-  const piso = c * l;
+  const ef = medicoes
+    .filter((m) => m.ambiente_id === a.id)
+    .map(efeitoMedicao)
+    .reduce(
+      (s, e) => ({
+        medicoes: s.medicoes + e.medicoes,
+        piso: s.piso + e.piso,
+        paredes: s.paredes + e.paredes,
+      }),
+      {
+        medicoes: 0,
+        piso: 0,
+        paredes: 0,
+      },
+    );
+  const piso = c && l ? Math.max(0, c * l + ef.piso) : 0;
   return {
     piso,
     teto: piso,
     perimetro,
-    paredes: Math.max(0, perimetro * pd - n(a.area_vaos)),
-    medicoes: medicoes
-      .filter((m) => m.ambiente_id === a.id)
-      .reduce((s, m) => s + totalMedicao(m), 0),
+    paredes: perimetro ? Math.max(0, perimetro * pd - n(a.area_vaos) + ef.paredes) : 0,
+    medicoes: ef.medicoes,
   };
 }
 

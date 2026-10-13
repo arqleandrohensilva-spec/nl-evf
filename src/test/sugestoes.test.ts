@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Ambiente, Evf, Item } from "@/lib/calc";
+import type { Ambiente, Evf, Item, Medicao } from "@/lib/calc";
 import { geometria, linhasDoModelo, quantidadeVinculada, sugerir } from "@/lib/sugestoes";
 
 const evf = (tipo: string): Evf => ({
@@ -63,6 +63,47 @@ describe("geometria do ambiente", () => {
     expect(g.piso).toBeCloseTo(12);
     expect(g.perimetro).toBeCloseTo(14);
     expect(g.paredes).toBeCloseTo(14 * 2.6 - 3);
+  });
+});
+
+describe("medições que mexem no ambiente", () => {
+  const med = (extra: Partial<Medicao>): Medicao => ({
+    id: "m",
+    ambiente_id: "w",
+    descricao: "",
+    largura: 0,
+    altura: 0,
+    profundidade: 0,
+    quantidade: 1,
+    sinal: 1,
+    tipo: null,
+    ordem: 0,
+    created_at: "",
+    ...extra,
+  });
+  const wc = amb("w", "WC", 2.68, 2.3, 2.27, 0);
+  it("porta e janela lançadas como vão saem das paredes", () => {
+    const g = geometria(wc, [
+      med({ largura: 0.86, altura: 2.1, sinal: -1 }),
+      med({ largura: 0.6, altura: 0.6, sinal: -1 }),
+    ]);
+    expect(g.paredes).toBeCloseTo(9.96 * 2.27 - 0.86 * 2.1 - 0.36);
+    expect(g.piso).toBeCloseTo(6.164);
+  });
+  it("shaft no canto tira do piso e do teto, paredes iguais", () => {
+    const g = geometria(wc, [
+      med({ tipo: "shaft_canto", largura: 0.4, profundidade: 0.3, altura: 2.27, sinal: -1 }),
+    ]);
+    expect(g.piso).toBeCloseTo(6.164 - 0.12);
+    expect(g.teto).toBeCloseTo(6.164 - 0.12);
+    expect(g.paredes).toBeCloseTo(9.96 * 2.27);
+    expect(g.medicoes).toBe(0);
+  });
+  it("shaft no meio da parede soma as duas laterais", () => {
+    const g = geometria(wc, [
+      med({ tipo: "shaft_parede", largura: 0.4, profundidade: 0.3, altura: 2.27, sinal: -1 }),
+    ]);
+    expect(g.paredes).toBeCloseTo(9.96 * 2.27 + 2 * 0.3 * 2.27);
   });
 });
 

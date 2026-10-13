@@ -21,3 +21,6 @@ update public.capitulos c set ordem = v.o from (values (1,1),(17,2),(2,3),(3,4),
 -- Link do produto pesquisado na internet (2026-10-13)
 alter table public.cotacoes add column if not exists link text;
 alter table public.itens_evf add column if not exists link text;
+
+-- Medições: profundidade e tipo (soma | vao | shaft_canto | shaft_parede) (2026-10-13)
+alter table public.medicoes add column if not exists profundidade numeric not null default 0, add column if not exists tipo text;

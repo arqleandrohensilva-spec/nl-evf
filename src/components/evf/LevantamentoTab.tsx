@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { totalMedicao, type Ambiente } from "@/lib/calc";
+import { efeitoMedicao, tipoMedicao, totalMedicao, type Ambiente, type Medicao } from "@/lib/calc";
 import { fmtM2, fmtN } from "@/lib/format";
 import { MODELOS } from "@/lib/biblioteca";
 import { buscadorDePreco, inserirItens } from "@/lib/actions";
@@ -11,15 +11,33 @@ import { geometria, linhasDoModelo } from "@/lib/sugestoes";
 import { NumCell, SelectCell, TextCell } from "./cells";
 import type { EvfData } from "./useEvfData";
 
-const SINAL = [
-  { value: "1", label: "+ soma" },
-  { value: "-1", label: "− vão" },
+const TIPOS = [
+  { value: "soma", label: "+ trecho (soma)" },
+  { value: "vao", label: "− vão (porta, janela)" },
+  { value: "shaft_canto", label: "Shaft / pilar no canto" },
+  { value: "shaft_parede", label: "Shaft / pilar no meio da parede" },
 ];
+
+const ehShaft = (m: Medicao) => tipoMedicao(m).startsWith("shaft");
+
+/** Texto curto do que a linha muda no ambiente. */
+function efeitoTexto(m: Medicao) {
+  const e = efeitoMedicao(m);
+  const partes: string[] = [];
+  if (e.medicoes)
+    partes.push(`${e.medicoes > 0 ? "+" : "−"}${fmtM2(Math.abs(e.medicoes))} medições`);
+  if (e.piso) partes.push(`piso e teto −${fmtM2(Math.abs(e.piso))}`);
+  if (e.paredes) partes.push(`paredes ${e.paredes > 0 ? "+" : "−"}${fmtM2(Math.abs(e.paredes))}`);
+  if (!partes.length && ehShaft(m)) partes.push("informe largura e profundidade");
+  if (!partes.length) partes.push("—");
+  return partes.join(" · ");
+}
 
 export function LevantamentoTab({ d }: { d: EvfData }) {
   const { evf, ambientes, medicoes, mAmb, mMed, itens, mItem } = d;
   const [novo, setNovo] = useState("");
   const [geral, setGeral] = useState("");
+  const [geralAmb, setGeralAmb] = useState("");
   const catalogo = useCatalogo().data ?? [];
   if (!evf) return null;
 
@@ -61,8 +79,9 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
       </div>
       <p className="text-sm text-muted-foreground">
         Informe comprimento, largura e pé-direito de cada ambiente: o sistema calcula piso, teto,
-        paredes e perímetro, e os itens vinculados no Escopo atualizam sozinhos. Para formatos
-        irregulares, lance trechos nas medições (vãos como “− vão”).
+        paredes e perímetro, e os itens vinculados no Escopo atualizam sozinhos. Nas medições
+        detalhadas, portas e janelas (“− vão”) saem das paredes, e shafts ou pilares saem do piso e
+        do teto. Para formatos irregulares, lance trechos como “+ trecho”.
       </p>
       <div className="card flex flex-wrap items-center gap-2 p-3">
         <Wand2 className="size-4 text-primary" aria-hidden />
@@ -80,12 +99,25 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
             </option>
           ))}
         </select>
+        <select
+          className="field h-10 w-60"
+          value={geralAmb}
+          onChange={(e) => setGeralAmb(e.target.value)}
+          aria-label="Ambiente dos itens gerais"
+        >
+          <option value="">para a obra toda (Itens gerais)</option>
+          {ambientes.map((a) => (
+            <option key={a.id} value={a.id}>
+              para {a.nome}
+            </option>
+          ))}
+        </select>
         <Button
           variant="outline"
           className="h-10"
           disabled={!geral}
           onClick={async () => {
-            await aplicar(geral, null);
+            await aplicar(geral, ambientes.find((a) => a.id === geralAmb) ?? null);
             setGeral("");
           }}
         >
@@ -98,8 +130,11 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
 
       {ambientes.map((a) => {
         const ms = medicoes.filter((m) => m.ambiente_id === a.id);
-        const tot = ms.reduce((s, m) => s + totalMedicao(m), 0);
         const g = geometria(a, medicoes);
+        const vaosMed = ms
+          .filter((m) => tipoMedicao(m) === "vao")
+          .reduce((s, m) => s - efeitoMedicao(m).paredes, 0);
+        const shafts = ms.filter(ehShaft).reduce((s, m) => s - efeitoMedicao(m).piso, 0);
         const updA = (v: Record<string, unknown>) => mAmb.update.mutate({ id: a.id, ...v });
         return (
           <section key={a.id} className="card p-4" aria-label={`Levantamento de ${a.nome}`}>
@@ -129,7 +164,7 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                   ["comprimento", "Comprimento (m)"],
                   ["largura", "Largura (m)"],
                   ["pe_direito", "Pé-direito (m)"],
-                  ["area_vaos", "Vãos a descontar (m²)"],
+                  ["area_vaos", "Outros vãos (m²)"],
                 ] as const
               ).map(([k, l]) => (
                 <label key={k} className="text-xs font-medium text-muted-foreground">
@@ -150,15 +185,19 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                   ["Paredes", g.paredes, "m²"],
                   ["Perímetro", g.perimetro, "m"],
                   ["Medições", g.medicoes, "m²"],
+                  ["Vãos descontados", vaosMed + Number(a.area_vaos), "m²"],
+                  ["Shafts / pilares no piso", shafts, "m²"],
                 ] as const
-              ).map(([l, v, u]) => (
-                <span key={l} className="rounded-lg bg-primary-soft px-3 py-1.5">
-                  <span className="text-muted-foreground">{l}: </span>
-                  <span className="num font-semibold">
-                    {fmtN(v)} {u}
+              )
+                .filter(([l, v]) => !(l.startsWith("Shafts") && !v))
+                .map(([l, v, u]) => (
+                  <span key={l} className="rounded-lg bg-primary-soft px-3 py-1.5">
+                    <span className="text-muted-foreground">{l}: </span>
+                    <span className="num font-semibold">
+                      {fmtN(v)} {u}
+                    </span>
                   </span>
-                </span>
-              ))}
+                ))}
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <select
@@ -184,24 +223,29 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
             </div>
             <details className="mt-3">
               <summary className="cursor-pointer text-sm font-medium text-primary">
-                Medições detalhadas ({ms.length}) · {fmtM2(tot)}
+                Medições detalhadas, vãos e shafts ({ms.length})
               </summary>
               <div className="overflow-x-auto">
-                <table className="tbl mt-2 min-w-[640px]">
+                <table className="tbl mt-2 min-w-[960px]">
                   <thead>
                     <tr>
                       <th>Trecho</th>
-                      <th className="w-28 text-right">Largura (m)</th>
-                      <th className="w-28 text-right">Altura (m)</th>
-                      <th className="w-20 text-right">Qtd</th>
-                      <th className="w-28">Tipo</th>
-                      <th className="w-28 text-right">Área</th>
+                      <th className="w-56">Tipo</th>
+                      <th className="w-24 text-right">Largura (m)</th>
+                      <th className="w-24 text-right">Altura (m)</th>
+                      <th
+                        className="w-28 text-right"
+                        title="Só para shaft ou pilar: quanto avança para dentro do ambiente"
+                      >
+                        Profundidade (m)
+                      </th>
+                      <th className="w-16 text-right">Qtd</th>
+                      <th className="w-64">Efeito no ambiente</th>
                       <th className="w-10" />
                     </tr>
                   </thead>
                   <tbody>
                     {ms.map((m) => {
-                      const t = totalMedicao(m);
                       return (
                         <tr key={m.id}>
                           <td>
@@ -209,7 +253,22 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                               value={m.descricao ?? ""}
                               placeholder="Ex.: parede da porta"
                               label="Trecho"
+                              className="min-w-[11rem]"
                               onSave={(v) => mMed.update.mutate({ id: m.id, descricao: v })}
+                            />
+                          </td>
+                          <td>
+                            <SelectCell
+                              value={tipoMedicao(m)}
+                              options={TIPOS}
+                              label="Tipo de medição"
+                              onSave={(v) =>
+                                mMed.update.mutate({
+                                  id: m.id,
+                                  tipo: v,
+                                  sinal: v === "soma" ? 1 : -1,
+                                })
+                              }
                             />
                           </td>
                           <td>
@@ -227,6 +286,19 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                             />
                           </td>
                           <td>
+                            {ehShaft(m) ? (
+                              <NumCell
+                                value={Number(m.profundidade)}
+                                label="Profundidade"
+                                onSave={(v) => mMed.update.mutate({ id: m.id, profundidade: v })}
+                              />
+                            ) : (
+                              <span className="block px-1.5 text-right text-muted-foreground">
+                                —
+                              </span>
+                            )}
+                          </td>
+                          <td>
                             <NumCell
                               value={Number(m.quantidade)}
                               decimals={0}
@@ -234,16 +306,10 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                               onSave={(v) => mMed.update.mutate({ id: m.id, quantidade: v })}
                             />
                           </td>
-                          <td>
-                            <SelectCell
-                              value={String(m.sinal < 0 ? -1 : 1)}
-                              options={SINAL}
-                              label="Soma ou vão"
-                              onSave={(v) => mMed.update.mutate({ id: m.id, sinal: Number(v) })}
-                            />
-                          </td>
-                          <td className={`num text-right ${t < 0 ? "text-warning" : ""}`}>
-                            {fmtM2(t)}
+                          <td
+                            className={`num text-xs ${efeitoMedicao(m).paredes < 0 || efeitoMedicao(m).piso < 0 ? "text-warning" : ""}`}
+                          >
+                            {efeitoTexto(m)}
                           </td>
                           <td>
                             <button
@@ -287,11 +353,30 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                       altura: 0,
                       quantidade: 1,
                       sinal: -1,
+                      tipo: "vao",
                       ordem: ms.length + 1,
                     })
                   }
                 >
-                  <Plus className="size-4" /> Vão (desconto)
+                  <Plus className="size-4" /> Vão (porta, janela)
+                </button>
+                <button
+                  className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-sm font-medium text-warning hover:bg-warning-soft"
+                  onClick={() =>
+                    mMed.insert.mutate({
+                      ambiente_id: a.id,
+                      descricao: "shaft",
+                      largura: 0,
+                      altura: Number(a.pe_direito) || 0,
+                      profundidade: 0,
+                      quantidade: 1,
+                      sinal: -1,
+                      tipo: "shaft_canto",
+                      ordem: ms.length + 1,
+                    })
+                  }
+                >
+                  <Plus className="size-4" /> Shaft / pilar
                 </button>
               </div>
             </details>

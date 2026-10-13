@@ -356,6 +356,8 @@ export type Database = {
       }
       medicoes: {
         Row: {
+          profundidade: number
+          tipo: string | null
           altura: number
           ambiente_id: string
           created_at: string
@@ -367,6 +369,8 @@ export type Database = {
           sinal: number
         }
         Insert: {
+          profundidade?: number
+          tipo?: string | null
           altura?: number
           ambiente_id: string
           created_at?: string
@@ -378,6 +382,8 @@ export type Database = {
           sinal?: number
         }
         Update: {
+          profundidade?: number
+          tipo?: string | null
           altura?: number
           ambiente_id?: string
           created_at?: string

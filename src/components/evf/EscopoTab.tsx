@@ -168,7 +168,7 @@ export function EscopoTab({ d }: { d: EvfData }) {
       ) : null}
 
       <div className="card overflow-x-auto">
-        <table className="tbl min-w-[1400px]">
+        <table className="tbl min-w-[1560px]">
           <thead>
             <tr>
               <th className="w-8">
@@ -187,6 +187,7 @@ export function EscopoTab({ d }: { d: EvfData }) {
               </th>
               <th className="w-16">Item</th>
               <th>Serviço</th>
+              <th className="w-44">Ambiente</th>
               <th className="w-16">Un.</th>
               <th className="w-24 text-right">Quant.</th>
               <th className="w-56">Quantidade vem de</th>
@@ -221,7 +222,7 @@ export function EscopoTab({ d }: { d: EvfData }) {
             ))}
             {!itens.length ? (
               <tr>
-                <td colSpan={15} className="py-8 text-center text-muted-foreground">
+                <td colSpan={16} className="py-8 text-center text-muted-foreground">
                   {filtro
                     ? "Nenhum item neste ambiente. Adicione serviços do catálogo ou itens livres: eles já entram neste ambiente."
                     : "Nenhum item. Adicione serviços do catálogo ou itens livres."}
@@ -231,7 +232,7 @@ export function EscopoTab({ d }: { d: EvfData }) {
           </tbody>
           <tfoot>
             <tr className="font-semibold">
-              <td colSpan={9} className="py-3">
+              <td colSpan={10} className="py-3">
                 Custo direto (material + mão de obra)
               </td>
               <td className="num text-right">{fmtR(res.mat)}</td>
@@ -304,6 +305,10 @@ function CapituloRows({
   todos: Item[];
   medicoes: EvfData["medicoes"];
 }) {
+  const opcoesAmbiente = [
+    { value: "", label: "Obra toda (gerais)" },
+    ...ambientes.map((a) => ({ value: a.id, label: a.nome })),
+  ];
   const opcoesVinculo = [
     { value: "manual", label: "digitada (manual)" },
     ...ambientes.flatMap((a) =>
@@ -328,7 +333,7 @@ function CapituloRows({
           />
         </td>
         <td className="num py-2 font-semibold">{c.codigo}</td>
-        <td colSpan={7} className="font-semibold uppercase tracking-wide">
+        <td colSpan={8} className="font-semibold uppercase tracking-wide">
           {c.nome}
         </td>
         <td className="num text-right font-semibold">{fmtR(c.mat)}</td>
@@ -367,6 +372,15 @@ function CapituloRows({
                 />
                 <LinkCell compact value={i.link} onSave={(v) => upd(i.id, { link: v })} />
               </div>
+            </td>
+            <td>
+              <SelectCell
+                value={i.ambiente_id ?? ""}
+                options={opcoesAmbiente}
+                label="Ambiente do item"
+                className="min-w-[9rem] text-xs"
+                onSave={(v) => upd(i.id, { ambiente_id: v || null })}
+              />
             </td>
             <td>
               <TextCell

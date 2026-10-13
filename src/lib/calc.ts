@@ -211,8 +211,41 @@ export function valorCotacao(valores: number[], criterio: string) {
   return v.reduce((s, x) => s + x, 0) / v.length;
 }
 
+export type TipoMedicao = "soma" | "vao" | "shaft_canto" | "shaft_parede";
+
+export function tipoMedicao(m: Pick<Medicao, "sinal"> & { tipo?: string | null }): TipoMedicao {
+  const t = m.tipo;
+  if (t === "soma" || t === "vao" || t === "shaft_canto" || t === "shaft_parede") return t;
+  return m.sinal < 0 ? "vao" : "soma";
+}
+
+/**
+ * Quanto cada linha de medição mexe no ambiente (m²):
+ * - soma: entra no total de medições (trechos de parede, áreas irregulares)
+ * - vão: sai das medições e das paredes (porta, janela)
+ * - shaft/pilar no canto: sai do piso e do teto; as faces do shaft substituem a parede escondida
+ * - shaft/pilar no meio da parede: sai do piso e do teto e soma as duas laterais nas paredes
+ */
+export function efeitoMedicao(m: Medicao) {
+  const l = n(m.largura),
+    h = n(m.altura),
+    p = n(m.profundidade),
+    q = n(m.quantidade);
+  switch (tipoMedicao(m)) {
+    case "soma":
+      return { medicoes: l * h * q, piso: 0, paredes: 0 };
+    case "vao":
+      return { medicoes: -l * h * q, piso: 0, paredes: -l * h * q };
+    case "shaft_canto":
+      return { medicoes: 0, piso: -l * p * q, paredes: 0 };
+    case "shaft_parede":
+      return { medicoes: 0, piso: -l * p * q, paredes: 2 * p * h * q };
+  }
+}
+
+/** Contribuição da linha no total de "Medições" do ambiente. */
 export function totalMedicao(m: Medicao) {
-  return n(m.largura) * n(m.altura) * n(m.quantidade) * (m.sinal < 0 ? -1 : 1);
+  return efeitoMedicao(m).medicoes;
 }
 
 export function proximaRevisao(rev: string) {
