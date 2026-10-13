@@ -18,6 +18,7 @@ import { ResumoTab } from "@/components/evf/ResumoTab";
 import { AbcTab } from "@/components/evf/AbcTab";
 import { AuditorTab } from "@/components/evf/AuditorTab";
 import { LevantamentoTab } from "@/components/evf/LevantamentoTab";
+import { Caminho } from "@/components/evf/Caminho";
 
 export const Route = createFileRoute("/_authenticated/evfs/$id")({
   head: () => ({ meta: [{ title: "EVF — NL · EVF" }] }),
@@ -37,6 +38,12 @@ function Page() {
     [evf, itens, caps, cotacoes, d.ambientes],
   );
   const [aba, setAba] = useState("escopo");
+  const comecou = useRef(false);
+  useEffect(() => {
+    if (comecou.current || d.carregando || !evf) return;
+    comecou.current = true;
+    if (!d.ambientes.length && !itens.length) setAba("levantamento");
+  }, [d.carregando, evf, d.ambientes.length, itens.length]);
   const [filtro, setFiltroState] = useState("");
   const chaveFiltro = `nl-evf:filtro:${id}`;
   useEffect(() => {
@@ -232,13 +239,15 @@ function Page() {
         </Button>
       </div>
 
+      <Caminho d={d} aba={aba} setAba={setAba} />
+
       <Tabs value={aba} onValueChange={setAba}>
         <TabsList className="no-print h-auto flex-wrap justify-start gap-1 bg-transparent p-0">
           {[
-            ["levantamento", "Ambientes e medidas"],
-            ["escopo", "Escopo"],
-            ["cotacoes", "Cotações"],
-            ["resumo", "Resumo"],
+            ["levantamento", "1 · Ambientes e medidas"],
+            ["escopo", "2 · Escopo"],
+            ["cotacoes", "3 · Cotações"],
+            ["resumo", "4 · Resumo"],
             ["abc", "Curva ABC"],
             ["auditor", `Auditor${nAlertas ? ` (${nAlertas})` : ""}`],
           ].map(([v, l]) => (

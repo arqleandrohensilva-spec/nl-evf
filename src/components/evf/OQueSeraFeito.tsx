@@ -1,137 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowRight, Check, MessageSquareText, Sparkles, Wand2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MODELOS, SERVICO } from "@/lib/biblioteca";
+import { SERVICO } from "@/lib/biblioteca";
 import { buscadorDePreco, inserirItens } from "@/lib/actions";
 import { useCatalogo } from "@/lib/data";
 import { fmtN } from "@/lib/format";
-import { interpretar, type Interpretacao, type Proposta } from "@/lib/interpretar";
-import { linhasDoModelo } from "@/lib/sugestoes";
+import type { Interpretacao, Proposta } from "@/lib/interpretar";
 import type { EvfData } from "./useEvfData";
 
-const EXEMPLO =
+export const EXEMPLO_AMBIENTE =
   "Ex.: Tirar todo o piso, deixar plano e arrumar o ralo. Piso novo e louças novas. Na parede, tirar o azulejo, impermeabilizar e colocar o mesmo revestimento do piso até 1,75 m. Manter o forro, só pintar. 2 tomadas novas.";
-
-/** "O que será feito": texto livre por ambiente (ou obra toda) que vira proposta de serviços. */
-export function OQueSeraFeito({
-  d,
-  alvo,
-  setAlvo,
-}: {
-  d: EvfData;
-  alvo: string;
-  setAlvo: (v: string) => void;
-}) {
-  const { evf, ambientes, medicoes, todosItens, mAmb, mEvf, mItem } = d;
-  const catalogo = useCatalogo().data ?? [];
-  const amb = ambientes.find((a) => a.id === alvo) ?? null;
-  const salvo = (amb ? amb.descricao_servico : evf?.descricao_obra) ?? "";
-  const [texto, setTexto] = useState(salvo);
-  useEffect(() => setTexto(salvo), [salvo, alvo]);
-  const [resultado, setResultado] = useState<Interpretacao | null>(null);
-  const [modelo, setModelo] = useState("");
-  if (!evf) return null;
-
-  function salvar() {
-    if (texto === salvo) return;
-    if (amb) mAmb.update.mutate({ id: amb.id, descricao_servico: texto });
-    else mEvf.update.mutate({ id: evf!.id, descricao_obra: texto });
-  }
-
-  function propor() {
-    salvar();
-    if (!texto.trim()) {
-      toast.error("Escreva o que será feito para eu propor os serviços.");
-      return;
-    }
-    setResultado(interpretar(texto, amb, medicoes, todosItens));
-  }
-
-  async function aplicarModelo() {
-    if (!modelo) return;
-    const linhas = linhasDoModelo(modelo, amb, medicoes, buscadorDePreco(catalogo));
-    await inserirItens(evf!.id, linhas, todosItens);
-    await mItem.invalidar();
-    toast.success(`${linhas.length} itens adicionados${amb ? ` em ${amb.nome}` : ""}.`);
-    setModelo("");
-  }
-
-  return (
-    <section className="card space-y-3 p-4" aria-label="O que será feito" id="o-que-sera-feito">
-      <div className="flex flex-wrap items-center gap-2">
-        <MessageSquareText className="size-4 text-primary" aria-hidden />
-        <h2 className="font-semibold">O que será feito</h2>
-        <select
-          className="field h-10 w-64"
-          value={alvo}
-          onChange={(e) => {
-            salvar();
-            setAlvo(e.target.value);
-          }}
-          aria-label="Onde será feito"
-        >
-          <option value="">Obra toda (itens gerais)</option>
-          {ambientes.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.nome}
-            </option>
-          ))}
-        </select>
-      </div>
-      <textarea
-        className="field min-h-28 w-full py-2 leading-relaxed"
-        placeholder={
-          amb
-            ? EXEMPLO
-            : "Ex.: Caçamba para o entulho, proteção dos pisos do condomínio, limpeza final, gestão por 2 meses, plano de reforma no condomínio."
-        }
-        value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-        onBlur={salvar}
-        aria-label={`O que será feito${amb ? ` em ${amb.nome}` : " na obra toda"}`}
-      />
-      <div className="flex flex-wrap items-center gap-2">
-        <Button className="h-10" onClick={propor}>
-          <Sparkles className="size-4" /> Propor serviços{amb ? ` para ${amb.nome}` : ""}
-        </Button>
-        <span className="text-xs text-muted-foreground">
-          Escreva do seu jeito: o que sai, o que fica, alturas (“até 1,75 m”), quantidades (“2
-          tomadas”). Você revisa antes de entrar no Escopo.
-        </span>
-      </div>
-      <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-        <Wand2 className="size-4 text-muted-foreground" aria-hidden />
-        <span className="text-sm text-muted-foreground">Ou comece por um modelo pronto:</span>
-        <select
-          className="field h-10 w-72"
-          value={modelo}
-          onChange={(e) => setModelo(e.target.value)}
-          aria-label="Modelo pronto"
-        >
-          <option value="">Escolha um modelo…</option>
-          {MODELOS.filter((m) => (amb ? true : m.para === "obra")).map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.nome}
-            </option>
-          ))}
-        </select>
-        <Button variant="outline" className="h-10" disabled={!modelo} onClick={aplicarModelo}>
-          Adicionar ao Escopo
-        </Button>
-      </div>
-      <PropostasDialog
-        d={d}
-        resultado={resultado}
-        nome={amb?.nome ?? "Obra toda"}
-        ambienteId={amb?.id ?? null}
-        onClose={() => setResultado(null)}
-        catalogo={catalogo}
-      />
-    </section>
-  );
-}
+export const EXEMPLO_OBRA =
+  "Ex.: Plano de reforma aprovado pelo síndico e RRT. Gestão por 2 meses. Seguro e impressão de projetos. Isolamento da área, proteção do trajeto até a caçamba, fretes e limpeza pós-obra.";
 
 const TITULO: Record<Proposta["acao"], string> = {
   adicionar: "Adicionar ao Escopo",
@@ -139,7 +21,7 @@ const TITULO: Record<Proposta["acao"], string> = {
   remover: "Tirar do Escopo",
 };
 
-function PropostasDialog({
+export function PropostasDialog({
   d,
   resultado,
   nome,
@@ -336,8 +218,8 @@ function PropostasDialog({
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Depois de aplicar, o painel “O EVF lembra” no Escopo confere o que esses serviços puxam
-          (ex.: teste de estanqueidade, chumbadores).
+          Depois de aplicar, os lembretes do bloco conferem o que esses serviços puxam (ex.: teste
+          de estanqueidade, soleira).
         </p>
       </DialogContent>
     </Dialog>

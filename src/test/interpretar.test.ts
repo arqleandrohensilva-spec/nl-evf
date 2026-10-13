@@ -178,6 +178,15 @@ describe("interpretar o que será feito", () => {
     expect(r.naoEntendi).toEqual([]);
   });
 
+  it("'tirar' vale só até o próximo verbo", () => {
+    const r = interpretar("Tirar o piso, deixar plano, piso novo e pintar o teto.", wc, [], []);
+    const ch = r.propostas.map((p) => p.chave);
+    expect(ch).toEqual(
+      expect.arrayContaining(["rem_piso", "regularizacao_contrapiso", "piso", "pint_teto"]),
+    );
+    expect(ch).not.toContain("rem_forro");
+  });
+
   it("frases sem serviço reconhecido voltam como 'não entendi'", () => {
     const r = interpretar("A síndica pediu capricho. Trocar 2 tomadas.", wc, [], []);
     expect(r.naoEntendi).toEqual(["A síndica pediu capricho"]);

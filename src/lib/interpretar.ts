@@ -270,6 +270,21 @@ function alturaNoTexto(f: string, pd: number): { h: number | null; aviso?: strin
   return { h: null };
 }
 
+const PROXIMO_VERBO =
+  /\b(deixar|deixa|colocar|coloca|pintar|pinta|impermeabiliz\w*|assentar|instalar|trocar|troca|fazer|regulariz\w*|nivelar|lixar|aplicar|manter|refazer|arrumar)\b/;
+
+/** Pedaços do texto que vêm logo depois de um verbo de retirada, até o próximo verbo. */
+function trechosDeRemocao(f: string) {
+  const partes: string[] = [];
+  const re = new RegExp(RE.remover.source, "g");
+  for (const m of f.matchAll(re)) {
+    const resto = f.slice((m.index ?? 0) + m[0].length);
+    const fim = resto.search(PROXIMO_VERBO);
+    partes.push(fim >= 0 ? resto.slice(0, fim) : resto);
+  }
+  return partes.join(" , ");
+}
+
 function superficies(f: string): Sup[] {
   const out: Sup[] = [];
   if (RE.piso.test(f)) out.push("piso");
@@ -516,9 +531,11 @@ export function interpretar(
             "Demolição de parede entrou com quantidade 0: informe a área (comprimento × altura).",
           );
         }
-        const supsRemover = superficies(ativo);
+        // "Tirar" vale só até o próximo verbo: "tirar o piso, deixar plano e pintar o teto" não tira o teto.
+        const seg = trechosDeRemocao(ativo);
+        const supsRemover = superficies(seg);
         if (supsRemover.includes("piso")) propor("rem_piso", frase, "Tirar o piso existente.");
-        if (supsRemover.includes("parede") && !RE.demolirParede.test(ativo)) {
+        if (supsRemover.includes("parede") && !RE.demolirParede.test(seg)) {
           const p = H && H < pd ? paredeAte(H) : paredeAte(null);
           propor("rem_parede", frase, "Tirar o revestimento existente da parede.", {
             ...(H && H < pd
@@ -532,12 +549,12 @@ export function interpretar(
           });
         }
         if (supsRemover.includes("teto")) propor("rem_forro", frase, "Tirar o forro existente.");
-        if (RE.loucas.test(ativo)) propor("rem_loucas", frase, "Tirar louças e metais existentes.");
-        if (RE.bancada.test(ativo)) propor("rem_bancada", frase, "Tirar a bancada existente.");
-        if (RE.box.test(ativo)) propor("rem_box", frase, "Tirar o box existente.");
-        if (RE.marcenaria.test(ativo))
+        if (RE.loucas.test(seg)) propor("rem_loucas", frase, "Tirar louças e metais existentes.");
+        if (RE.bancada.test(seg)) propor("rem_bancada", frase, "Tirar a bancada existente.");
+        if (RE.box.test(seg)) propor("rem_box", frase, "Tirar o box existente.");
+        if (RE.marcenaria.test(seg))
           propor("rem_marcenaria", frase, "Tirar a marcenaria existente.");
-        if (RE.porta.test(ativo) || RE.janela.test(ativo))
+        if (RE.porta.test(seg) || RE.janela.test(seg))
           propor("rem_esquadria", frase, "Tirar a esquadria existente.");
       }
 
@@ -912,6 +929,11 @@ export function interpretar(
     if (!reconheceu && props.size + remover.length === antes) naoEntendi.push(frase);
     if (agora.removeu || agora.nivelou) anterior = agora;
   }
+
+  if (amb && geo && !geo.piso && [...props.values()].some((p) => p.base_qtd))
+    avisos.push(
+      `${amb.nome} ainda não tem medidas: os serviços ligados ao piso, às paredes e ao teto entram com 0 e se ajustam sozinhos quando você informar comprimento, largura e pé-direito.`,
+    );
 
   // Serviços que dependem de medidas não fazem sentido sem ambiente.
   if (!amb) {

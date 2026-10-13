@@ -10,7 +10,16 @@ import { geometria, linhaDoServico, sugerir, type Sugestao } from "@/lib/sugesto
 import type { EvfData } from "./useEvfData";
 
 /** "O EVF lembra": o que provavelmente está faltando, com um clique para adicionar. */
-export function SugestoesPainel({ d, aberto = true }: { d: EvfData; aberto?: boolean }) {
+export function SugestoesPainel({
+  d,
+  aberto = true,
+  compacto = false,
+}: {
+  d: EvfData;
+  aberto?: boolean;
+  /** Dentro de um bloco de ambiente: some quando não há lembretes. */
+  compacto?: boolean;
+}) {
   const { evf, todosItens: itens, filtro, ambientes, medicoes, mItem, mEvf } = d;
   const catalogo = useCatalogo().data ?? [];
   const [open, setOpen] = useState(aberto);
@@ -69,8 +78,16 @@ export function SugestoesPainel({ d, aberto = true }: { d: EvfData; aberto?: boo
     mEvf.update.mutate({ id: evf!.id, sugestoes_ignoradas: [...atuais, s.id] });
   }
 
+  if (compacto && !lista.length) return null;
   return (
-    <section className="card border-primary/30" aria-label="Sugestões do EVF">
+    <section
+      className={
+        compacto
+          ? "rounded-lg border border-primary/30 bg-primary-soft/40"
+          : "card border-primary/30"
+      }
+      aria-label="Sugestões do EVF"
+    >
       <button
         type="button"
         className="flex w-full items-center gap-3 px-4 py-3 text-left"
@@ -79,12 +96,14 @@ export function SugestoesPainel({ d, aberto = true }: { d: EvfData; aberto?: boo
       >
         <Lightbulb className="size-5 text-primary" aria-hidden />
         <div className="flex-1">
-          <div className="font-semibold">
-            {lista.length
-              ? `O EVF lembra: ${lista.length} ${lista.length === 1 ? "item que costuma" : "itens que costumam"} faltar`
-              : "O EVF lembra: nada faltando pelas regras de obra"}
+          <div className={compacto ? "text-sm font-semibold" : "font-semibold"}>
+            {compacto
+              ? `Lembretes: ${lista.length} ${lista.length === 1 ? "item que costuma" : "itens que costumam"} faltar aqui`
+              : lista.length
+                ? `O EVF lembra: ${lista.length} ${lista.length === 1 ? "item que costuma" : "itens que costumam"} faltar`
+                : "O EVF lembra: nada faltando pelas regras de obra"}
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className={compacto ? "hidden" : "text-xs text-muted-foreground"}>
             Regras de obra: o que um serviço puxa (parede nova → chapisco, reboco, pintura) e o que
             toda obra deste tipo costuma ter.
           </div>

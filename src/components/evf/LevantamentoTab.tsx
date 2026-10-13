@@ -1,16 +1,11 @@
 import { useState } from "react";
-import { MessageSquareText, Plus, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { efeitoMedicao, tipoMedicao, totalMedicao, type Ambiente, type Medicao } from "@/lib/calc";
+import { efeitoMedicao, tipoMedicao, totalMedicao, type Medicao } from "@/lib/calc";
 import { fmtM2, fmtN } from "@/lib/format";
-import { MODELOS } from "@/lib/biblioteca";
-import { buscadorDePreco, inserirItens } from "@/lib/actions";
-import { useCatalogo } from "@/lib/data";
-import { geometria, linhasDoModelo } from "@/lib/sugestoes";
+import { geometria } from "@/lib/sugestoes";
 import { NumCell, SelectCell, TextCell } from "./cells";
 import type { EvfData } from "./useEvfData";
-import { OQueSeraFeito } from "./OQueSeraFeito";
 
 const TIPOS = [
   { value: "soma", label: "+ trecho (soma)" },
@@ -35,19 +30,10 @@ function efeitoTexto(m: Medicao) {
 }
 
 export function LevantamentoTab({ d }: { d: EvfData }) {
-  const { evf, ambientes, medicoes, mAmb, mMed, itens, mItem } = d;
+  const { evf, ambientes, medicoes, mAmb, mMed } = d;
   const [novo, setNovo] = useState("");
-  const [alvo, setAlvo] = useState("");
-  const catalogo = useCatalogo().data ?? [];
   if (!evf) return null;
 
-  async function aplicar(modeloId: string, amb: Ambiente | null) {
-    if (!modeloId) return;
-    const linhas = linhasDoModelo(modeloId, amb, medicoes, buscadorDePreco(catalogo));
-    await inserirItens(evf!.id, linhas, itens);
-    await mItem.invalidar();
-    toast.success(`${linhas.length} itens adicionados ao Escopo${amb ? ` (${amb.nome})` : ""}.`);
-  }
   const totalGeral = medicoes.reduce((s, m) => s + totalMedicao(m), 0);
 
   return (
@@ -83,8 +69,6 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
         detalhadas, portas e janelas (“− vão”) saem das paredes, e shafts ou pilares saem do piso e
         do teto. Para formatos irregulares, lance trechos como “+ trecho”.
       </p>
-      <OQueSeraFeito d={d} alvo={alvo} setAlvo={setAlvo} />
-
       {ambientes.map((a) => {
         const ms = medicoes.filter((m) => m.ambiente_id === a.id);
         const g = geometria(a, medicoes);
@@ -115,20 +99,6 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                 </button>
               </div>
             </div>
-            <button
-              type="button"
-              className="mt-2 flex w-full items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-left text-sm hover:bg-primary-soft"
-              onClick={() => {
-                setAlvo(a.id);
-                document.getElementById("o-que-sera-feito")?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              <MessageSquareText className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-              <span className={a.descricao_servico ? "line-clamp-2" : "text-muted-foreground"}>
-                {a.descricao_servico ||
-                  "Escrever o que será feito aqui e receber a proposta de serviços…"}
-              </span>
-            </button>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {(
                 [
@@ -168,28 +138,6 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                     </span>
                   </span>
                 ))}
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <select
-                className="field h-10 w-72"
-                defaultValue=""
-                aria-label={`Modelo para ${a.nome}`}
-                onChange={async (e) => {
-                  const v = e.target.value;
-                  e.target.value = "";
-                  if (v) await aplicar(v, a);
-                }}
-              >
-                <option value="">Aplicar modelo de ambiente…</option>
-                {MODELOS.filter((m) => m.para === "ambiente").map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nome}
-                  </option>
-                ))}
-              </select>
-              <span className="text-xs text-muted-foreground">
-                Insere os serviços típicos com as quantidades ligadas a estas medidas.
-              </span>
             </div>
             <details className="mt-3" open={ms.length > 0 || undefined}>
               <summary className="cursor-pointer text-sm font-medium text-primary">
