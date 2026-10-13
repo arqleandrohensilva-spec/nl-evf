@@ -14,7 +14,357 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ambientes: {
+        Row: {
+          evf_id: string
+          id: string
+          nome: string
+          ordem: number
+        }
+        Insert: {
+          evf_id: string
+          id?: string
+          nome: string
+          ordem?: number
+        }
+        Update: {
+          evf_id?: string
+          id?: string
+          nome?: string
+          ordem?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ambientes_evf_id_fkey"
+            columns: ["evf_id"]
+            isOneToOne: false
+            referencedRelation: "evfs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      capitulos: {
+        Row: {
+          codigo: number
+          id: string
+          nome: string
+          ordem: number
+          taxa_adm_pct: number | null
+        }
+        Insert: {
+          codigo: number
+          id?: string
+          nome: string
+          ordem?: number
+          taxa_adm_pct?: number | null
+        }
+        Update: {
+          codigo?: number
+          id?: string
+          nome?: string
+          ordem?: number
+          taxa_adm_pct?: number | null
+        }
+        Relationships: []
+      }
+      catalogo_servicos: {
+        Row: {
+          capitulo_codigo: number
+          codigo: string
+          created_at: string
+          data_preco: string | null
+          descricao: string
+          fonte: string | null
+          id: string
+          material_unit: number
+          mo_unit: number
+          tipo_preco: string
+          unidade: string
+        }
+        Insert: {
+          capitulo_codigo: number
+          codigo?: string
+          created_at?: string
+          data_preco?: string | null
+          descricao: string
+          fonte?: string | null
+          id?: string
+          material_unit?: number
+          mo_unit?: number
+          tipo_preco?: string
+          unidade?: string
+        }
+        Update: {
+          capitulo_codigo?: number
+          codigo?: string
+          created_at?: string
+          data_preco?: string | null
+          descricao?: string
+          fonte?: string | null
+          id?: string
+          material_unit?: number
+          mo_unit?: number
+          tipo_preco?: string
+          unidade?: string
+        }
+        Relationships: []
+      }
+      configuracoes: {
+        Row: {
+          cub_ref: string
+          cub_uf: string
+          cub_valor: number
+          id: number
+          margem_erro_pct: number
+          nome_escritorio: string
+        }
+        Insert: {
+          cub_ref?: string
+          cub_uf?: string
+          cub_valor?: number
+          id?: number
+          margem_erro_pct?: number
+          nome_escritorio?: string
+        }
+        Update: {
+          cub_ref?: string
+          cub_uf?: string
+          cub_valor?: number
+          id?: number
+          margem_erro_pct?: number
+          nome_escritorio?: string
+        }
+        Relationships: []
+      }
+      cotacoes: {
+        Row: {
+          data: string | null
+          fornecedor_nome: string | null
+          id: string
+          item_id: string
+          ordem: number
+          valor: number
+        }
+        Insert: {
+          data?: string | null
+          fornecedor_nome?: string | null
+          id?: string
+          item_id: string
+          ordem?: number
+          valor?: number
+        }
+        Update: {
+          data?: string | null
+          fornecedor_nome?: string | null
+          id?: string
+          item_id?: string
+          ordem?: number
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotacoes_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "itens_evf"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evfs: {
+        Row: {
+          area_m2: number
+          cidade_uf: string | null
+          cliente: string
+          created_at: string
+          data_base: string
+          id: string
+          obra: string
+          observacoes: string | null
+          origem_recurso: string
+          padrao: string
+          revisao: string
+          status: string
+          target: number
+          tipo_obra: string
+        }
+        Insert: {
+          area_m2?: number
+          cidade_uf?: string | null
+          cliente?: string
+          created_at?: string
+          data_base?: string
+          id?: string
+          obra?: string
+          observacoes?: string | null
+          origem_recurso?: string
+          padrao?: string
+          revisao?: string
+          status?: string
+          target?: number
+          tipo_obra?: string
+        }
+        Update: {
+          area_m2?: number
+          cidade_uf?: string | null
+          cliente?: string
+          created_at?: string
+          data_base?: string
+          id?: string
+          obra?: string
+          observacoes?: string | null
+          origem_recurso?: string
+          padrao?: string
+          revisao?: string
+          status?: string
+          target?: number
+          tipo_obra?: string
+        }
+        Relationships: []
+      }
+      fornecedores: {
+        Row: {
+          categoria: string | null
+          contato: string | null
+          created_at: string
+          id: string
+          nome: string
+          observacoes: string | null
+        }
+        Insert: {
+          categoria?: string | null
+          contato?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          observacoes?: string | null
+        }
+        Update: {
+          categoria?: string | null
+          contato?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          observacoes?: string | null
+        }
+        Relationships: []
+      }
+      itens_evf: {
+        Row: {
+          ambiente_id: string | null
+          capitulo_codigo: number
+          codigo: string
+          criterio_cotacao: string
+          descricao: string
+          etapa: string
+          evf_id: string
+          id: string
+          justificativa: string | null
+          material_unit: number
+          mo_unit: number
+          ordem: number
+          perda_pct: number
+          quantidade: number
+          tipo_preco: string
+          unidade: string
+        }
+        Insert: {
+          ambiente_id?: string | null
+          capitulo_codigo: number
+          codigo?: string
+          criterio_cotacao?: string
+          descricao?: string
+          etapa?: string
+          evf_id: string
+          id?: string
+          justificativa?: string | null
+          material_unit?: number
+          mo_unit?: number
+          ordem?: number
+          perda_pct?: number
+          quantidade?: number
+          tipo_preco?: string
+          unidade?: string
+        }
+        Update: {
+          ambiente_id?: string | null
+          capitulo_codigo?: number
+          codigo?: string
+          criterio_cotacao?: string
+          descricao?: string
+          etapa?: string
+          evf_id?: string
+          id?: string
+          justificativa?: string | null
+          material_unit?: number
+          mo_unit?: number
+          ordem?: number
+          perda_pct?: number
+          quantidade?: number
+          tipo_preco?: string
+          unidade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_evf_ambiente_id_fkey"
+            columns: ["ambiente_id"]
+            isOneToOne: false
+            referencedRelation: "ambientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_evf_evf_id_fkey"
+            columns: ["evf_id"]
+            isOneToOne: false
+            referencedRelation: "evfs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicoes: {
+        Row: {
+          altura: number
+          ambiente_id: string
+          created_at: string
+          descricao: string | null
+          id: string
+          largura: number
+          ordem: number
+          quantidade: number
+          sinal: number
+        }
+        Insert: {
+          altura?: number
+          ambiente_id: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          largura?: number
+          ordem?: number
+          quantidade?: number
+          sinal?: number
+        }
+        Update: {
+          altura?: number
+          ambiente_id?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          largura?: number
+          ordem?: number
+          quantidade?: number
+          sinal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicoes_ambiente_id_fkey"
+            columns: ["ambiente_id"]
+            isOneToOne: false
+            referencedRelation: "ambientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
