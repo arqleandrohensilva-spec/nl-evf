@@ -55,6 +55,7 @@ function itens(): Item[] {
       base_qtd: null,
       base_item_id: null,
       fator: 1,
+      link: null,
     };
   });
 }

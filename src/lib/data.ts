@@ -121,6 +121,11 @@ export function useMut(table: T, invalidate: string[] = []) {
       onSuccess: done,
       onError,
     }),
+    removeMany: useMutation({
+      mutationFn: (ids: string[]) => run(tb().delete().in("id", ids)),
+      onSuccess: done,
+      onError,
+    }),
   };
 }
 

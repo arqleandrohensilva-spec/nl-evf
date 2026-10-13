@@ -11,7 +11,7 @@ import { buscadorDePreco, inserirItens } from "@/lib/actions";
 import type { Ambiente } from "@/lib/calc";
 import { SugestoesPainel } from "./SugestoesPainel";
 import { fmtN, fmtR } from "@/lib/format";
-import { ETAPA_OPTIONS, NumCell, SelectCell, TextCell, TIPO_OPTIONS } from "./cells";
+import { ETAPA_OPTIONS, LinkCell, NumCell, SelectCell, TextCell, TIPO_OPTIONS } from "./cells";
 import type { EvfData } from "./useEvfData";
 
 function proximoCodigo(itens: Item[], cap: number) {
@@ -28,10 +28,36 @@ export function EscopoTab({ d }: { d: EvfData }) {
   const res = useMemo(() => resumo(itens, caps), [itens, caps]);
   const [catOpen, setCatOpen] = useState(false);
   const [livreCap, setLivreCap] = useState<string>("");
+  const [sel, setSel] = useState<Set<string>>(new Set());
   const catalogo = useCatalogo().data ?? [];
   if (!evf) return null;
 
   const upd = (id: string, v: Record<string, unknown>) => mItem.update.mutate({ id, ...v });
+  const selecionados = itens.filter((i) => sel.has(i.id));
+  const alternar = (ids: string[], marcar: boolean) =>
+    setSel((s) => {
+      const n = new Set(s);
+      for (const id of ids) {
+        if (marcar) n.add(id);
+        else n.delete(id);
+      }
+      return n;
+    });
+
+  async function excluirSelecionados() {
+    const n = selecionados.length;
+    if (!n) return;
+    const total = selecionados.reduce((s, i) => s + itemTotais(i).total, 0);
+    if (
+      !confirm(
+        `Excluir ${n} ${n === 1 ? "item" : "itens"} (${fmtR(total)})? As cotações deles também saem. Não dá para desfazer.`,
+      )
+    )
+      return;
+    await mItem.removeMany.mutateAsync(selecionados.map((i) => i.id));
+    setSel(new Set());
+    toast.success(`${n} ${n === 1 ? "item excluído" : "itens excluídos"}.`);
+  }
   const maxOrdem = itens.reduce((m, i) => Math.max(m, i.ordem), 0);
 
   async function addLivre() {
@@ -87,12 +113,75 @@ export function EscopoTab({ d }: { d: EvfData }) {
             + Item livre
           </Button>
         </div>
+        {ambientes.length ? (
+          <select
+            className="field h-10 w-56"
+            value=""
+            aria-label="Selecionar itens de um ambiente"
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!v) return;
+              alternar(
+                itens
+                  .filter((i) => (v === "geral" ? !i.ambiente_id : i.ambiente_id === v))
+                  .map((i) => i.id),
+                true,
+              );
+            }}
+          >
+            <option value="">Selecionar itens do ambiente…</option>
+            {ambientes.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nome}
+              </option>
+            ))}
+            <option value="geral">Itens gerais (sem ambiente)</option>
+          </select>
+        ) : null}
       </div>
+
+      {selecionados.length ? (
+        <div
+          role="status"
+          className="sticky top-2 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-warning/40 bg-warning-soft px-4 py-2"
+        >
+          <span className="text-sm font-medium">
+            {selecionados.length} selecionado{selecionados.length === 1 ? "" : "s"} ·{" "}
+            <span className="num">
+              {fmtR(selecionados.reduce((s, i) => s + itemTotais(i).total, 0))}
+            </span>
+          </span>
+          <Button
+            className="h-9 bg-warning text-white hover:bg-warning/90"
+            onClick={excluirSelecionados}
+            disabled={mItem.removeMany.isPending}
+          >
+            <Trash2 className="size-4" /> Excluir selecionados
+          </Button>
+          <Button variant="ghost" className="h-9" onClick={() => setSel(new Set())}>
+            Limpar seleção
+          </Button>
+        </div>
+      ) : null}
 
       <div className="card overflow-x-auto">
         <table className="tbl min-w-[1400px]">
           <thead>
             <tr>
+              <th className="w-8">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-primary"
+                  aria-label="Selecionar todos os itens"
+                  checked={itens.length > 0 && sel.size === itens.length}
+                  ref={(el) => {
+                    if (el) el.indeterminate = sel.size > 0 && sel.size < itens.length;
+                  }}
+                  onChange={(e) =>
+                    e.target.checked ? setSel(new Set(itens.map((i) => i.id))) : setSel(new Set())
+                  }
+                />
+              </th>
               <th className="w-16">Item</th>
               <th>Serviço</th>
               <th className="w-16">Un.</th>
@@ -116,7 +205,12 @@ export function EscopoTab({ d }: { d: EvfData }) {
                 c={c}
                 upd={upd}
                 mover={mover}
-                remover={(id) => mItem.remove.mutate(id)}
+                remover={(id) => {
+                  mItem.remove.mutate(id);
+                  alternar([id], false);
+                }}
+                sel={sel}
+                alternar={alternar}
                 ambientes={ambientes}
                 todos={itens}
                 medicoes={d.medicoes}
@@ -124,7 +218,7 @@ export function EscopoTab({ d }: { d: EvfData }) {
             ))}
             {!itens.length ? (
               <tr>
-                <td colSpan={14} className="py-8 text-center text-muted-foreground">
+                <td colSpan={15} className="py-8 text-center text-muted-foreground">
                   Nenhum item. Adicione serviços do catálogo ou itens livres.
                 </td>
               </tr>
@@ -132,7 +226,7 @@ export function EscopoTab({ d }: { d: EvfData }) {
           </tbody>
           <tfoot>
             <tr className="font-semibold">
-              <td colSpan={8} className="py-3">
+              <td colSpan={9} className="py-3">
                 Custo direto (material + mão de obra)
               </td>
               <td className="num text-right">{fmtR(res.mat)}</td>
@@ -191,7 +285,11 @@ function CapituloRows({
   ambientes,
   todos,
   medicoes,
+  sel,
+  alternar,
 }: {
+  sel: Set<string>;
+  alternar: (ids: string[], marcar: boolean) => void;
   c: ReturnType<typeof resumo>["capitulos"][number];
   upd: (id: string, v: Record<string, unknown>) => void;
   mover: (i: Item, d: -1 | 1) => void;
@@ -206,9 +304,23 @@ function CapituloRows({
       BASES_AMB.map((b) => ({ value: `${a.id}|${b}`, label: `${a.nome} · ${BASE_LABEL[b]}` })),
     ),
   ];
+  const idsCap = c.itens.map((i) => i.id);
+  const nSel = idsCap.filter((id) => sel.has(id)).length;
   return (
     <>
       <tr className="bg-muted/70">
+        <td>
+          <input
+            type="checkbox"
+            className="size-4 accent-primary"
+            aria-label={`Selecionar todos os itens de ${c.nome}`}
+            checked={idsCap.length > 0 && nSel === idsCap.length}
+            ref={(el) => {
+              if (el) el.indeterminate = nSel > 0 && nSel < idsCap.length;
+            }}
+            onChange={(e) => alternar(idsCap, e.target.checked)}
+          />
+        </td>
         <td className="num py-2 font-semibold">{c.codigo}</td>
         <td colSpan={7} className="font-semibold uppercase tracking-wide">
           {c.nome}
@@ -221,7 +333,16 @@ function CapituloRows({
       {c.itens.map((i) => {
         const t = itemTotais(i);
         return (
-          <tr key={i.id}>
+          <tr key={i.id} className={sel.has(i.id) ? "bg-warning-soft/60" : undefined}>
+            <td>
+              <input
+                type="checkbox"
+                className="size-4 accent-primary"
+                aria-label={`Selecionar ${i.codigo} ${i.descricao}`}
+                checked={sel.has(i.id)}
+                onChange={(e) => alternar([i.id], e.target.checked)}
+              />
+            </td>
             <td>
               <TextCell
                 value={i.codigo}
@@ -231,12 +352,15 @@ function CapituloRows({
               />
             </td>
             <td>
-              <TextCell
-                value={i.descricao}
-                label="Serviço"
-                className="min-w-64"
-                onSave={(v) => upd(i.id, { descricao: v })}
-              />
+              <div className="flex items-center gap-1">
+                <TextCell
+                  value={i.descricao}
+                  label="Serviço"
+                  className="min-w-64"
+                  onSave={(v) => upd(i.id, { descricao: v })}
+                />
+                <LinkCell compact value={i.link} onSave={(v) => upd(i.id, { link: v })} />
+              </div>
             </td>
             <td>
               <TextCell

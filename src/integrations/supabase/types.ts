@@ -150,6 +150,7 @@ export type Database = {
       }
       cotacoes: {
         Row: {
+          link: string | null
           data: string | null
           fornecedor_nome: string | null
           id: string
@@ -158,6 +159,7 @@ export type Database = {
           valor: number
         }
         Insert: {
+          link?: string | null
           data?: string | null
           fornecedor_nome?: string | null
           id?: string
@@ -166,6 +168,7 @@ export type Database = {
           valor?: number
         }
         Update: {
+          link?: string | null
           data?: string | null
           fornecedor_nome?: string | null
           id?: string
@@ -266,6 +269,7 @@ export type Database = {
       }
       itens_evf: {
         Row: {
+          link: string | null
           base_item_id: string | null
           base_qtd: string | null
           chave: string | null
@@ -288,6 +292,7 @@ export type Database = {
           unidade: string
         }
         Insert: {
+          link?: string | null
           base_item_id?: string | null
           base_qtd?: string | null
           chave?: string | null
@@ -310,6 +315,7 @@ export type Database = {
           unidade?: string
         }
         Update: {
+          link?: string | null
           base_item_id?: string | null
           base_qtd?: string | null
           chave?: string | null

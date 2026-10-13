@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { fmtN, parseNum } from "@/lib/format";
+import { ExternalLink, Link as LinkIcon, Pencil } from "lucide-react";
+import { fmtN, normalizaLink, parseNum, siteDoLink } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /** Célula numérica editável: mostra formatado, edita como texto, grava ao sair ou com Enter. */
@@ -180,3 +181,80 @@ export const ETAPA_OPTIONS = [
 export const STATUS_OPTIONS = ["Rascunho", "Escopo", "Cotações", "Apresentado", "Aprovado"].map(
   (s) => ({ value: s, label: s }),
 );
+
+/** Link de produto/fornecedor: mostra o site e abre em nova aba; clique no lápis para colar ou trocar. */
+export function LinkCell({
+  value,
+  onSave,
+  label = "Link do produto",
+  compact = false,
+}: {
+  value: string | null | undefined;
+  onSave: (v: string | null) => void;
+  label?: string;
+  compact?: boolean;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [txt, setTxt] = useState(value ?? "");
+  useEffect(() => setTxt(value ?? ""), [value]);
+  const salvar = () => {
+    setEditando(false);
+    const novo = normalizaLink(txt);
+    if (novo !== (value ?? null)) onSave(novo);
+  };
+  if (editando)
+    return (
+      <input
+        autoFocus
+        aria-label={label}
+        placeholder="Cole o link (https://…)"
+        className="cell-input min-w-[14rem] border-primary"
+        value={txt}
+        onChange={(e) => setTxt(e.target.value)}
+        onBlur={salvar}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") {
+            setTxt(value ?? "");
+            setEditando(false);
+          }
+        }}
+      />
+    );
+  if (!value)
+    return (
+      <button
+        type="button"
+        aria-label={`Adicionar ${label.toLowerCase()}`}
+        title={`Adicionar ${label.toLowerCase()}`}
+        className="inline-flex min-h-8 items-center gap-1 rounded px-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-primary"
+        onClick={() => setEditando(true)}
+      >
+        <LinkIcon className="size-3.5" />
+        {compact ? null : "link"}
+      </button>
+    );
+  return (
+    <span className="inline-flex min-h-8 max-w-full items-center gap-0.5">
+      <a
+        href={value}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={value}
+        className="inline-flex min-w-0 items-center gap-1 rounded px-1.5 text-xs font-medium text-primary hover:bg-primary-soft"
+      >
+        <ExternalLink className="size-3.5 shrink-0" />
+        {compact ? null : <span className="truncate">{siteDoLink(value)}</span>}
+      </a>
+      <button
+        type="button"
+        aria-label={`Editar ${label.toLowerCase()}`}
+        title="Trocar ou apagar o link"
+        className="rounded p-1 text-muted-foreground hover:bg-muted"
+        onClick={() => setEditando(true)}
+      >
+        <Pencil className="size-3" />
+      </button>
+    </span>
+  );
+}

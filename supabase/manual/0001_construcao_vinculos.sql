@@ -17,3 +17,7 @@ insert into public.capitulos (codigo,nome,ordem,taxa_adm_pct) values
 (17,'Projetos e aprovações',2,0),(18,'Fundações',6,10),(19,'Estrutura',7,20),(20,'Alvenaria e vedações',8,25),(21,'Cobertura',9,15),(22,'Esquadrias',14,10),(23,'Águas pluviais',12,20),(24,'Paisagismo e área externa',24,10),(25,'Equipamentos',23,5)
 on conflict (codigo) do nothing;
 update public.capitulos c set ordem = v.o from (values (1,1),(17,2),(2,3),(3,4),(4,5),(18,6),(19,7),(20,8),(21,9),(5,10),(6,11),(23,12),(7,13),(22,14),(8,15),(9,16),(11,17),(10,18),(12,19),(13,20),(14,21),(15,22),(25,23),(24,24),(16,25)) as v(cod,o) where c.codigo=v.cod;
+
+-- Link do produto pesquisado na internet (2026-10-13)
+alter table public.cotacoes add column if not exists link text;
+alter table public.itens_evf add column if not exists link text;

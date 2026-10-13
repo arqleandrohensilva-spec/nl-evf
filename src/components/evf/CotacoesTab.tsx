@@ -2,7 +2,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { sortItens, valorCotacao, type Cotacao, type Item } from "@/lib/calc";
 import { fmtR } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { NumCell, TextCell } from "./cells";
+import { LinkCell, NumCell, TextCell } from "./cells";
 import type { EvfData } from "./useEvfData";
 
 const CRITERIOS = [
@@ -58,7 +58,8 @@ export function CotacoesTab({ d }: { d: EvfData }) {
       </div>
       <p className="text-sm text-muted-foreground">
         Padrão: média de 3 fornecedores. O valor considerado vira o preço unitário de material do
-        item. Ao trocar o critério, registre a justificativa.
+        item. Ao trocar o critério, registre a justificativa. Cole o link da página do produto em
+        cada cotação; preço da internet é referência, não cotação formal: anote a data.
       </p>
       <div className="space-y-3">
         {lista.map((i) => {
@@ -69,9 +70,16 @@ export function CotacoesTab({ d }: { d: EvfData }) {
             <section key={i.id} className="card p-4" aria-label={`Cotações de ${i.descricao}`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="font-semibold">
-                    <span className="num mr-2 text-muted-foreground">{i.codigo}</span>
-                    {i.descricao}
+                  <div className="flex flex-wrap items-center gap-2 font-semibold">
+                    <span>
+                      <span className="num mr-2 text-muted-foreground">{i.codigo}</span>
+                      {i.descricao}
+                    </span>
+                    <LinkCell
+                      value={i.link}
+                      label="Link do produto especificado"
+                      onSave={(v) => mItem.update.mutate({ id: i.id, link: v })}
+                    />
                   </div>
                   <div className="mt-1 flex flex-wrap gap-2 text-xs">
                     {vals.length < 3 ? (
@@ -125,6 +133,7 @@ export function CotacoesTab({ d }: { d: EvfData }) {
                     <th>Fornecedor</th>
                     <th className="w-36 text-right">Valor (R$)</th>
                     <th className="w-40">Data</th>
+                    <th className="w-56">Link do produto</th>
                     <th className="w-10" />
                   </tr>
                 </thead>
@@ -161,6 +170,13 @@ export function CotacoesTab({ d }: { d: EvfData }) {
                           onChange={(e) =>
                             mCot.update.mutate({ id: c.id, data: e.target.value || null })
                           }
+                        />
+                      </td>
+                      <td>
+                        <LinkCell
+                          value={c.link}
+                          label="Link da cotação"
+                          onSave={(v) => mCot.update.mutate({ id: c.id, link: v })}
                         />
                       </td>
                       <td>

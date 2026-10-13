@@ -52,7 +52,18 @@ export async function duplicarEvf(evfId: string): Promise<string> {
   const mapaAmb = new Map<string, string>();
   for (const a of ambientes) {
     const [na] = await run(
-      supabase.from("ambientes").insert({ evf_id: novo.id, nome: a.nome, ordem: a.ordem }).select(),
+      supabase
+        .from("ambientes")
+        .insert({
+          evf_id: novo.id,
+          nome: a.nome,
+          ordem: a.ordem,
+          comprimento: a.comprimento,
+          largura: a.largura,
+          pe_direito: a.pe_direito,
+          area_vaos: a.area_vaos,
+        })
+        .select(),
     );
     if (na) mapaAmb.set(a.id, na.id);
   }
@@ -81,6 +92,13 @@ export async function duplicarEvf(evfId: string): Promise<string> {
       const ins = inseridos[idx];
       if (ins) mapaItem.set(orig.id, ins.id);
     });
+  }
+  // Itens que copiam a quantidade de outro item passam a apontar para a cópia nova.
+  for (const orig of itens) {
+    const novoId = mapaItem.get(orig.id);
+    const ref = orig.base_item_id ? mapaItem.get(orig.base_item_id) : undefined;
+    if (novoId && ref)
+      await run(supabase.from("itens_evf").update({ base_item_id: ref }).eq("id", novoId));
   }
   const novasCot = cotacoes
     .filter((c) => mapaItem.has(c.item_id))
@@ -201,10 +219,14 @@ export async function exportarXlsx(
       "CRITÉRIO",
       "Fornecedor 1",
       "Valor 1",
+      "Link 1",
       "Fornecedor 2",
       "Valor 2",
+      "Link 2",
       "Fornecedor 3",
       "Valor 3",
+      "Link 3",
+      "LINK DO PRODUTO",
     ],
   ];
   for (const i of sortItens(itens).filter((x) => x.tipo_preco === "cotacao")) {
@@ -215,7 +237,11 @@ export async function exportarXlsx(
       r2(Number(i.material_unit)),
       i.criterio_cotacao,
     ];
-    for (const c of cs.slice(0, 3)) linha.push(c.fornecedor_nome ?? "", Number(c.valor));
+    for (let k = 0; k < 3; k++) {
+      const c = cs[k];
+      linha.push(c?.fornecedor_nome ?? "", c ? Number(c.valor) : "", c?.link ?? "");
+    }
+    linha.push(i.link ?? "");
     pesq.push(linha);
   }
 
@@ -255,7 +281,7 @@ export async function exportarXlsx(
   };
   add("1_RESUMO", resumoAoa, [8, 42, 18, 18, 16]);
   add("2_PLANILHA DETALHADA", det, [8, 58, 7, 9, 8, 14, 16, 12, 16, 14, 12, 12]);
-  add("3_PESQUISA DE PREÇOS", pesq, [8, 50, 16, 10, 18, 12, 18, 12, 18, 12]);
+  add("3_PESQUISA DE PREÇOS", pesq, [8, 50, 16, 10, 18, 12, 30, 18, 12, 30, 18, 12, 30, 30]);
   add("4_TAXA ADM", taxa, [8, 42, 8, 16]);
   add("5_CURVA ABC", abcAoa, [8, 58, 7, 9, 14, 10, 12, 8]);
   const nome = `EVF_${(evf.obra || "obra").replace(/[^\w-]+/g, "_")}_${evf.revisao}.xlsx`;
