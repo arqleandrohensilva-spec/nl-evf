@@ -116,6 +116,95 @@ const RE = {
   demolirParede: /\b(demolir|derrubar|quebrar|abrir)\s+(a |uma |essa |esta )?parede\b/,
 };
 
+/** Vocabulário que o interpretador conhece; palavras digitadas com 1 ou 2 letras trocadas são corrigidas. */
+const VOCAB = [
+  "piso",
+  "pisos",
+  "parede",
+  "paredes",
+  "teto",
+  "forro",
+  "contrapiso",
+  "azulejo",
+  "azulejos",
+  "impermeabilizar",
+  "impermeabilizacao",
+  "revestimento",
+  "revestir",
+  "porcelanato",
+  "ceramica",
+  "regularizar",
+  "regularizacao",
+  "nivelar",
+  "nivelado",
+  "pintar",
+  "pintura",
+  "textura",
+  "chapisco",
+  "lixar",
+  "lixamento",
+  "remover",
+  "retirar",
+  "demolir",
+  "manter",
+  "loucas",
+  "metais",
+  "torneira",
+  "tomada",
+  "tomadas",
+  "interruptor",
+  "luminaria",
+  "luminarias",
+  "iluminacao",
+  "espelho",
+  "bancada",
+  "divisoria",
+  "exaustor",
+  "cacamba",
+  "entulho",
+  "rodape",
+  "soleira",
+  "caimento",
+  "chuveiro",
+];
+const VOCAB_SET = new Set(VOCAB);
+
+/** Distância de edição com transposição (psio → piso = 1). */
+function distancia(a: string, b: string) {
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) =>
+    Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
+  );
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++) {
+      const c = a[i - 1] === b[j - 1] ? 0 : 1;
+      let v = Math.min(d[i - 1]![j]! + 1, d[i]![j - 1]! + 1, d[i - 1]![j - 1]! + c);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1])
+        v = Math.min(v, d[i - 2]![j - 2]! + 1);
+      d[i]![j] = v;
+    }
+  return d[a.length]![b.length]!;
+}
+
+/** Corrige erros de digitação nas palavras-chave ("impermebilizar", "psio", "aprede"). */
+export function corrigir(textoNormalizado: string) {
+  return textoNormalizado.replace(/[a-z]{4,}/g, (w) => {
+    if (VOCAB_SET.has(w)) return w;
+    if (/^imper/.test(w)) return w.endsWith("cao") ? "impermeabilizacao" : "impermeabilizar";
+    const limite = w.length >= 8 ? 2 : 1;
+    let melhor = w;
+    let menor = limite + 1;
+    for (const v of VOCAB) {
+      if (Math.abs(v.length - w.length) > limite) continue;
+      const dd = distancia(w, v);
+      if (dd < menor) {
+        menor = dd;
+        melhor = v;
+      }
+    }
+    return menor <= limite ? melhor : w;
+  });
+}
+
 function quantidadeNoTexto(f: string, nome: string): number | null {
   const re = new RegExp(
     `\\b(\\d+|${Object.keys(NUM_PALAVRA).join("|")})\\s+(?:nov[oa]s?\\s+)?(?:${nome})`,
@@ -188,7 +277,7 @@ export function interpretar(
   const meds = amb ? medicoes.filter((m) => m.ambiente_id === amb.id) : [];
   const nomeAmb = normaliza(amb?.nome ?? "");
   const cozinha = /cozinha|copa|gourmet|churrasq/.test(nomeAmb);
-  const textoTodo = normaliza(texto);
+  const textoTodo = corrigir(normaliza(texto));
 
   // Parede revestida até H: perímetro × H, descontando portas inteiras e a parte das janelas abaixo de H.
   function paredeAte(H: number | null) {
@@ -292,7 +381,7 @@ export function interpretar(
     .filter((t) => t.length > 1);
 
   for (const frase of frases) {
-    const f = normaliza(frase);
+    const f = corrigir(normaliza(frase));
     const clausulas = f
       .split(/,|\bmas\b|\bporem\b/)
       .map((c) => c.trim())

@@ -114,6 +114,18 @@ describe("interpretar o que será feito", () => {
     expect(r.jaNoEscopo.join()).toMatch(/Revestimento de piso/);
   });
 
+  it("tolera erros de digitação (texto real do Banheiro Masculino)", () => {
+    const real =
+      "vamos que ter tirar todo piso q esta nele, deixar plano, arrumar o ralo, para depois colocar u novo piso com as novas louças. \n\no mesmo da parede, lixar, passar, e tudo q tem q fazer para impermebilizar para colocar o mesmo revestimento do psio na aprede ate uma certa altura  até 1,75 m";
+    const r = interpretar(real, wc, [porta], []);
+    const ch = r.propostas.map((p) => p.chave);
+    expect(ch).toEqual(
+      expect.arrayContaining(["imperm_parede", "parede_rev", "lixamento_parede", "piso"]),
+    );
+    expect(r.propostas.find((p) => p.chave === "imperm_parede")?.descricao).toMatch(/até 1,75 m/);
+    expect(r.avisos.join()).not.toMatch(/Faltou a altura/);
+  });
+
   it("frases sem serviço reconhecido voltam como 'não entendi'", () => {
     const r = interpretar("A síndica pediu capricho. Trocar 2 tomadas.", wc, [], []);
     expect(r.naoEntendi).toEqual(["A síndica pediu capricho"]);
