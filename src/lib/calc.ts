@@ -101,6 +101,76 @@ export function resumo(itens: Item[], caps: Capitulo[]) {
   };
 }
 
+/** Filtro de ambiente: "" = todos, "geral" = itens sem ambiente (obra toda), ou o id do ambiente. */
+export function filtrarPorAmbiente(itens: Item[], filtro: string) {
+  if (!filtro) return itens;
+  if (filtro === "geral") return itens.filter((i) => !i.ambiente_id);
+  return itens.filter((i) => i.ambiente_id === filtro);
+}
+
+export interface LinhaAmbiente {
+  id: string;
+  nome: string;
+  itens: number;
+  mat: number;
+  mo: number;
+  direto: number;
+  taxas: number;
+  geral: number;
+  /** Parte dos itens gerais distribuída para este ambiente (só com ratear). */
+  rateio: number;
+  /** Total com o rateio dos gerais. */
+  final: number;
+}
+
+/**
+ * Soma por ambiente. Itens sem ambiente (gestão, seguro, caçamba…) formam a linha "Itens gerais".
+ * Com ratear, os gerais são distribuídos entre os ambientes na proporção do custo direto de cada um,
+ * e a soma dos "final" continua igual ao total do EVF.
+ */
+export function porAmbiente(
+  itens: Item[],
+  caps: Capitulo[],
+  ambientes: { id: string; nome: string }[],
+  ratear = false,
+): { linhas: LinhaAmbiente[]; geral: LinhaAmbiente | null; total: number } {
+  const linha = (id: string, nome: string, its: Item[]): LinhaAmbiente => {
+    const r = resumo(its, caps);
+    return {
+      id,
+      nome,
+      itens: its.length,
+      mat: r.mat,
+      mo: r.mo,
+      direto: r.direto,
+      taxas: r.taxas,
+      geral: r.geral,
+      rateio: 0,
+      final: r.geral,
+    };
+  };
+  const ids = new Set(ambientes.map((a) => a.id));
+  const linhas = ambientes.map((a) =>
+    linha(
+      a.id,
+      a.nome,
+      itens.filter((i) => i.ambiente_id === a.id),
+    ),
+  );
+  const soltos = itens.filter((i) => !i.ambiente_id || !ids.has(i.ambiente_id));
+  const geral = soltos.length ? linha("geral", "Itens gerais (obra toda)", soltos) : null;
+  const baseRateio = linhas.reduce((s, l) => s + l.direto, 0);
+  if (ratear && geral && baseRateio > 0) {
+    for (const l of linhas) {
+      l.rateio = geral.geral * (l.direto / baseRateio);
+      l.final = l.geral + l.rateio;
+    }
+  }
+  const total =
+    linhas.reduce((s, l) => s + l.final, 0) + (ratear && baseRateio > 0 ? 0 : (geral?.geral ?? 0));
+  return { linhas, geral, total };
+}
+
 /** Soma por etapa (Agora × Etapa futura), com e sem a taxa do capítulo. */
 export function porEtapa(itens: Item[], caps: Capitulo[]) {
   const agora = { direto: 0, geral: 0 };

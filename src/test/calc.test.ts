@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   curvaABC,
+  porAmbiente,
   proximaRevisao,
   resumo,
   valorCotacao,
@@ -94,5 +95,31 @@ describe("regras auxiliares", () => {
   it("próxima revisão", () => {
     expect(proximaRevisao("R00")).toBe("R01");
     expect(proximaRevisao("R09")).toBe("R10");
+  });
+});
+
+describe("orçamento por ambiente", () => {
+  const caps = capitulos();
+  const base = itens();
+  // metade dos itens no banheiro, gestão/seguro sem ambiente, o resto no salão
+  const its = base.map((i, k) => ({
+    ...i,
+    ambiente_id: i.capitulo_codigo <= 2 ? null : k % 2 ? "ban" : "sal",
+  }));
+  const ambs = [
+    { id: "ban", nome: "Banheiro" },
+    { id: "sal", nome: "Salão" },
+  ];
+  it("a soma dos ambientes + gerais fecha no total do EVF", () => {
+    const r = porAmbiente(its, caps, ambs);
+    const soma = r.linhas.reduce((s, l) => s + l.geral, 0) + (r.geral?.geral ?? 0);
+    expect(soma).toBeCloseTo(44603.06, 1);
+    expect(r.total).toBeCloseTo(44603.06, 1);
+    expect(r.geral?.nome).toMatch(/gerais/);
+  });
+  it("com rateio, os gerais somem da conta e o total continua igual", () => {
+    const r = porAmbiente(its, caps, ambs, true);
+    expect(r.linhas.reduce((s, l) => s + l.final, 0)).toBeCloseTo(44603.06, 1);
+    expect(r.linhas.reduce((s, l) => s + l.rateio, 0)).toBeCloseTo(r.geral?.geral ?? 0, 6);
   });
 });

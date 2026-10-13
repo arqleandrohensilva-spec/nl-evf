@@ -28,6 +28,10 @@ export function useEvfData(id: string) {
     carregando: evfQ.isLoading,
     erro: evfQ.error,
     itens,
+    /** Todos os itens do EVF, mesmo quando a tela está filtrada por ambiente (use para códigos e regras). */
+    todosItens: itens,
+    /** Ambiente em foco: "" = todos, "geral" = itens sem ambiente, ou o id do ambiente. */
+    filtro: "" as string,
     caps,
     config,
     ambientes,

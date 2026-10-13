@@ -2,19 +2,36 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { curvaABC, itemTotais, porEtapa, resumo } from "@/lib/calc";
+import {
+  curvaABC,
+  filtrarPorAmbiente,
+  itemTotais,
+  porAmbiente,
+  porEtapa,
+  resumo,
+} from "@/lib/calc";
 import { fmtData, fmtN, fmtPct, fmtR } from "@/lib/format";
 import { useEvfData } from "@/components/evf/useEvfData";
 
 export const Route = createFileRoute("/_authenticated/imprimir/$id")({
   head: () => ({ meta: [{ title: "EVF para o cliente — NL · EVF" }] }),
+  validateSearch: (s: Record<string, unknown>): { amb?: string } =>
+    typeof s["amb"] === "string" && s["amb"] ? { amb: s["amb"] } : {},
   component: Page,
 });
 
 function Page() {
   const { id } = Route.useParams();
+  const { amb = "" } = Route.useSearch();
   const d = useEvfData(id);
-  const { evf, itens, caps, config } = d;
+  const { evf, caps, config, ambientes } = d;
+  const itens = useMemo(() => filtrarPorAmbiente(d.itens, amb), [d.itens, amb]);
+  const nomeAmb =
+    amb === "geral" ? "Itens gerais (obra toda)" : ambientes.find((a) => a.id === amb)?.nome;
+  const porAmb = useMemo(
+    () => porAmbiente(d.itens, caps, ambientes, true),
+    [d.itens, caps, ambientes],
+  );
   const res = useMemo(() => resumo(itens, caps), [itens, caps]);
   const abc = useMemo(() => curvaABC(itens), [itens]);
   const etapas = useMemo(() => porEtapa(itens, caps), [itens, caps]);
@@ -44,6 +61,11 @@ function Page() {
             <div className="mt-1 text-base">
               {evf.obra} — {evf.cliente}
             </div>
+            {nomeAmb ? (
+              <div className="mt-1 inline-block rounded bg-primary-soft px-2 py-0.5 text-sm font-semibold text-primary">
+                Ambiente: {nomeAmb}
+              </div>
+            ) : null}
           </div>
           <dl className="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 text-right text-xs">
             <dt className="text-muted-foreground">Revisão</dt>
@@ -99,6 +121,29 @@ function Page() {
           </table>
         </section>
 
+        {!nomeAmb && porAmb.linhas.length >= 2 ? (
+          <section className="break-inside-avoid">
+            <h2 className="mb-1 text-base font-semibold">Por ambiente</h2>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Custos gerais da obra (gestão, seguro, canteiro, limpeza) distribuídos entre os
+              ambientes na proporção do custo de cada um.
+            </p>
+            <table className="w-full border-collapse">
+              <tbody>
+                {porAmb.linhas.map((l) => (
+                  <tr key={l.id} className="border-b">
+                    <td className="py-1">{l.nome}</td>
+                    <td className="num w-32 py-1 text-right">{fmtR(l.final)}</td>
+                    <td className="num w-16 py-1 text-right text-muted-foreground">
+                      {fmtPct(porAmb.total ? (l.final / porAmb.total) * 100 : 0)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ) : null}
+
         <section className="break-inside-avoid">
           <h2 className="mb-2 text-base font-semibold">Resumo</h2>
           <table className="w-full border-collapse">
@@ -112,7 +157,9 @@ function Page() {
               ))}
               <tr className="text-base font-bold">
                 <td />
-                <td className="py-3">Total geral estimado</td>
+                <td className="py-3">
+                  {nomeAmb ? `Total estimado — ${nomeAmb}` : "Total geral estimado"}
+                </td>
                 <td className="num py-3 text-right">{fmtR(res.geral)}</td>
               </tr>
               {temFutura ? (
@@ -129,7 +176,7 @@ function Page() {
                   </tr>
                 </>
               ) : null}
-              {target ? (
+              {target && !nomeAmb ? (
                 <tr>
                   <td />
                   <td className="py-0.5 text-muted-foreground">

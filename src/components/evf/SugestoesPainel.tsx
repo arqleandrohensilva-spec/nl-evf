@@ -11,11 +11,16 @@ import type { EvfData } from "./useEvfData";
 
 /** "O EVF lembra": o que provavelmente está faltando, com um clique para adicionar. */
 export function SugestoesPainel({ d, aberto = true }: { d: EvfData; aberto?: boolean }) {
-  const { evf, itens, ambientes, medicoes, mItem, mEvf } = d;
+  const { evf, todosItens: itens, filtro, ambientes, medicoes, mItem, mEvf } = d;
   const catalogo = useCatalogo().data ?? [];
   const [open, setOpen] = useState(aberto);
   const [ocupado, setOcupado] = useState(false);
-  const lista = useMemo(() => (evf ? sugerir(evf, itens, ambientes) : []), [evf, itens, ambientes]);
+  // As regras olham a obra inteira; com um ambiente em foco, mostra só o que é dele.
+  const lista = useMemo(() => {
+    const todas = evf ? sugerir(evf, itens, ambientes) : [];
+    if (!filtro) return todas;
+    return todas.filter((s) => (filtro === "geral" ? !s.ambienteId : s.ambienteId === filtro));
+  }, [evf, itens, ambientes, filtro]);
   if (!evf) return null;
 
   function linhaDe(s: Sugestao) {

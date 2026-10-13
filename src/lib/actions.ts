@@ -1,7 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import {
   curvaABC,
+  filtrarPorAmbiente,
   itemTotais,
+  porAmbiente,
   proximaRevisao,
   resumo,
   sortItens,
@@ -122,12 +124,24 @@ export async function exportarXlsx(
   caps: Capitulo[],
   cotacoes: Cotacao[],
   escritorio: string,
+  opts: { ambientes?: { id: string; nome: string }[]; filtro?: string } = {},
 ) {
   const XLSX = await import("xlsx");
+  const ambientes = opts.ambientes ?? [];
+  const filtro = opts.filtro ?? "";
+  const todos = itens;
+  itens = filtrarPorAmbiente(todos, filtro);
+  const nomeAmb =
+    filtro === "geral" ? "Itens gerais" : (ambientes.find((a) => a.id === filtro)?.nome ?? "");
   const res = resumo(itens, caps);
   const cab = [
     [escritorio, "", "Cliente:", evf.cliente],
-    ["ESTUDO DE VIABILIDADE FINANCEIRA", "", "Obra:", evf.obra],
+    [
+      "ESTUDO DE VIABILIDADE FINANCEIRA",
+      "",
+      "Obra:",
+      nomeAmb ? `${evf.obra} — ${nomeAmb}` : evf.obra,
+    ],
     ["Planilha de estimativa de custos diretos", "", "Data-base:", evf.data_base],
     ["", "", "Revisão:", evf.revisao],
     [],
@@ -284,7 +298,50 @@ export async function exportarXlsx(
   add("3_PESQUISA DE PREÇOS", pesq, [8, 50, 16, 10, 18, 12, 30, 18, 12, 30, 18, 12, 30, 30]);
   add("4_TAXA ADM", taxa, [8, 42, 8, 16]);
   add("5_CURVA ABC", abcAoa, [8, 58, 7, 9, 14, 10, 12, 8]);
-  const nome = `EVF_${(evf.obra || "obra").replace(/[^\w-]+/g, "_")}_${evf.revisao}.xlsx`;
+  if (!filtro && ambientes.length) {
+    const pa = porAmbiente(todos, caps, ambientes, true);
+    const aoa: (string | number)[][] = [
+      ...cab,
+      [
+        "AMBIENTE",
+        "Itens",
+        "Material",
+        "M.O.",
+        "Custo direto",
+        "Taxas adm.",
+        "Total do ambiente",
+        "Rateio dos itens gerais",
+        "Total com rateio",
+      ],
+      ...pa.linhas.map((l) => [
+        l.nome,
+        l.itens,
+        r2(l.mat),
+        r2(l.mo),
+        r2(l.direto),
+        r2(l.taxas),
+        r2(l.geral),
+        r2(l.rateio),
+        r2(l.final),
+      ]),
+    ];
+    if (pa.geral)
+      aoa.push([
+        `${pa.geral.nome} — distribuídos na coluna de rateio`,
+        pa.geral.itens,
+        r2(pa.geral.mat),
+        r2(pa.geral.mo),
+        r2(pa.geral.direto),
+        r2(pa.geral.taxas),
+        r2(pa.geral.geral),
+        "",
+        "",
+      ]);
+    aoa.push(["TOTAL GERAL", "", "", "", "", "", "", "", r2(pa.total)]);
+    add("6_POR AMBIENTE", aoa, [36, 7, 14, 14, 14, 13, 16, 16, 16]);
+  }
+  const sufixo = nomeAmb ? `_${nomeAmb.replace(/[^\w-]+/g, "_")}` : "";
+  const nome = `EVF_${(evf.obra || "obra").replace(/[^\w-]+/g, "_")}${sufixo}_${evf.revisao}.xlsx`;
   XLSX.writeFile(wb, nome);
 }
 

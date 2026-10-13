@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Link2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -24,11 +24,13 @@ function proximoCodigo(itens: Item[], cap: number) {
 }
 
 export function EscopoTab({ d }: { d: EvfData }) {
-  const { evf, itens, caps, mItem, ambientes, medicoes } = d;
+  const { evf, itens, todosItens, filtro, caps, mItem, ambientes, medicoes } = d;
+  const ambFiltro = filtro && filtro !== "geral" ? filtro : "";
   const res = useMemo(() => resumo(itens, caps), [itens, caps]);
   const [catOpen, setCatOpen] = useState(false);
   const [livreCap, setLivreCap] = useState<string>("");
   const [sel, setSel] = useState<Set<string>>(new Set());
+  useEffect(() => setSel(new Set()), [filtro]);
   const catalogo = useCatalogo().data ?? [];
   if (!evf) return null;
 
@@ -58,7 +60,7 @@ export function EscopoTab({ d }: { d: EvfData }) {
     setSel(new Set());
     toast.success(`${n} ${n === 1 ? "item excluído" : "itens excluídos"}.`);
   }
-  const maxOrdem = itens.reduce((m, i) => Math.max(m, i.ordem), 0);
+  const maxOrdem = todosItens.reduce((m, i) => Math.max(m, i.ordem), 0);
 
   async function addLivre() {
     const cap = Number(livreCap);
@@ -68,8 +70,9 @@ export function EscopoTab({ d }: { d: EvfData }) {
     }
     await mItem.insert.mutateAsync({
       evf_id: evf!.id,
+      ambiente_id: ambFiltro || null,
       capitulo_codigo: cap,
-      codigo: proximoCodigo(itens, cap),
+      codigo: proximoCodigo(todosItens, cap),
       descricao: "Novo item",
       unidade: "un",
       quantidade: 1,
@@ -113,7 +116,7 @@ export function EscopoTab({ d }: { d: EvfData }) {
             + Item livre
           </Button>
         </div>
-        {ambientes.length ? (
+        {ambientes.length && !filtro ? (
           <select
             className="field h-10 w-56"
             value=""
@@ -212,14 +215,16 @@ export function EscopoTab({ d }: { d: EvfData }) {
                 sel={sel}
                 alternar={alternar}
                 ambientes={ambientes}
-                todos={itens}
+                todos={todosItens}
                 medicoes={d.medicoes}
               />
             ))}
             {!itens.length ? (
               <tr>
                 <td colSpan={15} className="py-8 text-center text-muted-foreground">
-                  Nenhum item. Adicione serviços do catálogo ou itens livres.
+                  {filtro
+                    ? "Nenhum item neste ambiente. Adicione serviços do catálogo ou itens livres: eles já entram neste ambiente."
+                    : "Nenhum item. Adicione serviços do catálogo ou itens livres."}
                 </td>
               </tr>
             ) : null}
@@ -242,6 +247,7 @@ export function EscopoTab({ d }: { d: EvfData }) {
         open={catOpen}
         onOpenChange={setCatOpen}
         ambientes={ambientes}
+        ambInicial={ambFiltro}
         onPick={async (s, ambienteId) => {
           const amb = ambientes.find((a) => a.id === ambienteId) ?? null;
           if (s.chave) {
@@ -251,14 +257,14 @@ export function EscopoTab({ d }: { d: EvfData }) {
               amb ? geometria(amb, medicoes) : null,
               buscadorDePreco(catalogo),
             );
-            if (linha) await inserirItens(evf.id, [linha], itens);
+            if (linha) await inserirItens(evf.id, [linha], todosItens);
             await d.mItem.invalidar();
           } else {
             await mItem.insert.mutateAsync({
               evf_id: evf.id,
               ambiente_id: amb?.id ?? null,
               capitulo_codigo: s.capitulo_codigo,
-              codigo: proximoCodigo(itens, s.capitulo_codigo),
+              codigo: proximoCodigo(todosItens, s.capitulo_codigo),
               descricao: s.descricao,
               unidade: s.unidade,
               quantidade: 1,
@@ -532,15 +538,20 @@ function CatalogoDialog({
   onOpenChange,
   onPick,
   ambientes,
+  ambInicial,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onPick: (s: Escolha, ambienteId: string) => Promise<void>;
   ambientes: Ambiente[];
+  ambInicial: string;
 }) {
   const catalogo = useCatalogo().data ?? [];
   const [q, setQ] = useState("");
-  const [amb, setAmb] = useState("");
+  const [amb, setAmb] = useState(ambInicial);
+  useEffect(() => {
+    if (open) setAmb(ambInicial);
+  }, [open, ambInicial]);
   const noCatalogo = new Set(catalogo.map((c) => normaliza(c.descricao)));
   const todos: Escolha[] = [
     ...catalogo.map((c) => ({

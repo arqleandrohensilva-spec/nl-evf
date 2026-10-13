@@ -6,7 +6,7 @@ import { Copy, FileDown, Pencil, Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { auditar, resumo } from "@/lib/calc";
+import { auditar, filtrarPorAmbiente, porAmbiente, resumo } from "@/lib/calc";
 import { duplicarEvf, exportarXlsx } from "@/lib/actions";
 import { fmtData, fmtPct, fmtR } from "@/lib/format";
 import { useEvfData } from "@/components/evf/useEvfData";
@@ -37,6 +37,31 @@ function Page() {
     [evf, itens, caps, cotacoes, d.ambientes],
   );
   const [aba, setAba] = useState("escopo");
+  const [filtro, setFiltroState] = useState("");
+  const chaveFiltro = `nl-evf:filtro:${id}`;
+  useEffect(() => {
+    try {
+      setFiltroState(localStorage.getItem(chaveFiltro) ?? "");
+    } catch {
+      /* sem armazenamento: começa em Todos */
+    }
+  }, [chaveFiltro]);
+  const setFiltro = (v: string) => {
+    setFiltroState(v);
+    try {
+      localStorage.setItem(chaveFiltro, v);
+    } catch {
+      /* ignora */
+    }
+  };
+  // Se o ambiente filtrado foi apagado, volta para Todos.
+  const filtroValido =
+    !filtro || filtro === "geral" || d.ambientes.some((a) => a.id === filtro) ? filtro : "";
+  const dv = useMemo(
+    () => ({ ...d, itens: filtrarPorAmbiente(d.itens, filtroValido), filtro: filtroValido }),
+    [d, filtroValido],
+  );
+  const porAmb = useMemo(() => porAmbiente(itens, caps, d.ambientes), [itens, caps, d.ambientes]);
 
   // Itens vinculados às medidas (ou a outro item) acompanham as mudanças automaticamente.
   const pendentes = useRef(new Map<string, number>());
@@ -168,19 +193,23 @@ function Page() {
           variant="outline"
           className="h-10"
           onClick={() =>
-            exportarXlsx(
-              evf,
-              itens,
-              caps,
-              cotacoes,
-              config?.nome_escritorio ?? "NL Arquitetos",
-            ).catch((e: unknown) => toast.error(String(e)))
+            exportarXlsx(evf, itens, caps, cotacoes, config?.nome_escritorio ?? "NL Arquitetos", {
+              ambientes: d.ambientes,
+              filtro: filtroValido,
+            }).catch((e: unknown) => toast.error(String(e)))
           }
         >
           <FileDown className="size-4" /> Exportar .xlsx
+          {filtroValido ? (
+            <span className="text-xs text-muted-foreground">(só o ambiente)</span>
+          ) : null}
         </Button>
         <Button asChild variant="outline" className="h-10">
-          <Link to="/imprimir/$id" params={{ id: evf.id }}>
+          <Link
+            to="/imprimir/$id"
+            params={{ id: evf.id }}
+            search={filtroValido ? { amb: filtroValido } : {}}
+          >
             <Printer className="size-4" /> PDF do cliente
           </Link>
         </Button>
@@ -222,17 +251,48 @@ function Page() {
             </TabsTrigger>
           ))}
         </TabsList>
+        {d.ambientes.length && ["escopo", "cotacoes", "resumo", "abc"].includes(aba) ? (
+          <div
+            role="group"
+            aria-label="Ambiente em foco"
+            className="no-print mt-4 flex flex-wrap items-center gap-2"
+          >
+            <span className="text-sm text-muted-foreground">Ambiente:</span>
+            {[
+              { v: "", l: "Todos", total: res.geral },
+              ...porAmb.linhas.map((l) => ({ v: l.id, l: l.nome, total: l.geral })),
+              ...(porAmb.geral
+                ? [{ v: "geral", l: "Itens gerais", total: porAmb.geral.geral }]
+                : []),
+            ].map((o) => (
+              <button
+                key={o.v || "todos"}
+                type="button"
+                aria-pressed={filtroValido === o.v}
+                onClick={() => setFiltro(o.v)}
+                className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3 text-sm ${
+                  filtroValido === o.v
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card hover:bg-muted"
+                }`}
+              >
+                <span className="font-medium">{o.l}</span>
+                <span className="num text-xs opacity-80">{fmtR(o.total)}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
         <TabsContent value="escopo" className="mt-4">
-          <EscopoTab d={d} />
+          <EscopoTab d={dv} />
         </TabsContent>
         <TabsContent value="cotacoes" className="mt-4">
-          <CotacoesTab d={d} />
+          <CotacoesTab d={dv} />
         </TabsContent>
         <TabsContent value="resumo" className="mt-4">
-          <ResumoTab d={d} />
+          <ResumoTab d={dv} />
         </TabsContent>
         <TabsContent value="abc" className="mt-4">
-          <AbcTab d={d} />
+          <AbcTab d={dv} />
         </TabsContent>
         <TabsContent value="auditor" className="mt-4">
           <AuditorTab d={d} />
