@@ -158,13 +158,12 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                 </button>
               </div>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {(
                 [
                   ["comprimento", "Comprimento (m)"],
                   ["largura", "Largura (m)"],
                   ["pe_direito", "Pé-direito (m)"],
-                  ["area_vaos", "Outros vãos (m²)"],
                 ] as const
               ).map(([k, l]) => (
                 <label key={k} className="text-xs font-medium text-muted-foreground">
@@ -221,10 +220,15 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                 Insere os serviços típicos com as quantidades ligadas a estas medidas.
               </span>
             </div>
-            <details className="mt-3">
+            <details className="mt-3" open={ms.length > 0 || undefined}>
               <summary className="cursor-pointer text-sm font-medium text-primary">
-                Medições detalhadas, vãos e shafts ({ms.length})
+                Portas, janelas, shafts e medições detalhadas ({ms.length})
               </summary>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Lance cada porta e janela com “+ Vão” (largura × altura): elas saem das paredes.
+                Shaft ou pilar com “+ Shaft / pilar” (largura × profundidade): sai do piso e do
+                teto.
+              </p>
               <div className="overflow-x-auto">
                 <table className="tbl mt-2 min-w-[960px]">
                   <thead>
