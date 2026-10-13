@@ -16,18 +16,30 @@ export type Database = {
     Tables: {
       ambientes: {
         Row: {
+          area_vaos: number
+          comprimento: number
+          largura: number
+          pe_direito: number
           evf_id: string
           id: string
           nome: string
           ordem: number
         }
         Insert: {
+          area_vaos?: number
+          comprimento?: number
+          largura?: number
+          pe_direito?: number
           evf_id: string
           id?: string
           nome: string
           ordem?: number
         }
         Update: {
+          area_vaos?: number
+          comprimento?: number
+          largura?: number
+          pe_direito?: number
           evf_id?: string
           id?: string
           nome?: string
@@ -173,6 +185,7 @@ export type Database = {
       }
       evfs: {
         Row: {
+          sugestoes_ignoradas: Json
           area_m2: number
           cidade_uf: string | null
           cliente: string
@@ -189,6 +202,7 @@ export type Database = {
           tipo_obra: string
         }
         Insert: {
+          sugestoes_ignoradas?: Json
           area_m2?: number
           cidade_uf?: string | null
           cliente?: string
@@ -205,6 +219,7 @@ export type Database = {
           tipo_obra?: string
         }
         Update: {
+          sugestoes_ignoradas?: Json
           area_m2?: number
           cidade_uf?: string | null
           cliente?: string
@@ -251,6 +266,10 @@ export type Database = {
       }
       itens_evf: {
         Row: {
+          base_item_id: string | null
+          base_qtd: string | null
+          chave: string | null
+          fator: number
           ambiente_id: string | null
           capitulo_codigo: number
           codigo: string
@@ -269,6 +288,10 @@ export type Database = {
           unidade: string
         }
         Insert: {
+          base_item_id?: string | null
+          base_qtd?: string | null
+          chave?: string | null
+          fator?: number
           ambiente_id?: string | null
           capitulo_codigo: number
           codigo?: string
@@ -287,6 +310,10 @@ export type Database = {
           unidade?: string
         }
         Update: {
+          base_item_id?: string | null
+          base_qtd?: string | null
+          chave?: string | null
+          fator?: number
           ambiente_id?: string | null
           capitulo_codigo?: number
           codigo?: string

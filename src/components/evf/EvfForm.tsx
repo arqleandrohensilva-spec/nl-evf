@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { Config, Evf } from "@/lib/calc";
 import { fmtR, parseNum } from "@/lib/format";
+import { PACOTES_INICIAIS } from "@/lib/biblioteca";
 
 const TIPOS = ["Reforma de interiores", "Reforma com ampliação", "Construção do zero", "Comercial"];
 const PADROES = ["Baixo", "Médio", "Alto"];
@@ -37,14 +38,17 @@ export function EvfFormDialog({
   config,
   onSubmit,
   textoBotao,
+  comPacote = false,
 }: {
   trigger: React.ReactNode;
   titulo: string;
   inicial?: Partial<EvfDados>;
   config?: Config | null | undefined;
-  onSubmit: (d: EvfDados) => Promise<void> | void;
+  onSubmit: (d: EvfDados, pacote: string) => Promise<void> | void;
   textoBotao: string;
+  comPacote?: boolean;
 }) {
+  const [pacote, setPacote] = useState("vazio");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [f, setF] = useState(() => ({
@@ -70,18 +74,21 @@ export function EvfFormDialog({
     e.preventDefault();
     setBusy(true);
     try {
-      await onSubmit({
-        cliente: f.cliente,
-        obra: f.obra,
-        tipo_obra: f.tipo_obra,
-        cidade_uf: f.cidade_uf,
-        area_m2: area,
-        padrao: f.padrao,
-        target: parseNum(f.target),
-        origem_recurso: f.origem_recurso,
-        data_base: f.data_base,
-        observacoes: f.observacoes,
-      });
+      await onSubmit(
+        {
+          cliente: f.cliente,
+          obra: f.obra,
+          tipo_obra: f.tipo_obra,
+          cidade_uf: f.cidade_uf,
+          area_m2: area,
+          padrao: f.padrao,
+          target: parseNum(f.target),
+          origem_recurso: f.origem_recurso,
+          data_base: f.data_base,
+          observacoes: f.observacoes,
+        },
+        pacote,
+      );
       setOpen(false);
     } finally {
       setBusy(false);
@@ -178,6 +185,40 @@ export function EvfFormDialog({
               />
             </label>
           </div>
+          {comPacote ? (
+            <label className="text-sm font-medium">
+              Começar a partir de
+              <select
+                className="field mt-1"
+                value={pacote}
+                onChange={(e) => {
+                  setPacote(e.target.value);
+                  const tipo =
+                    e.target.value === "construcao"
+                      ? "Construção do zero"
+                      : e.target.value === "vazio"
+                        ? f.tipo_obra
+                        : "Reforma de interiores";
+                  setF((p) => ({ ...p, tipo_obra: tipo }));
+                }}
+              >
+                {PACOTES_INICIAIS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                {pacote === "vazio"
+                  ? "EVF vazio, com um ambiente."
+                  : `Cria os ambientes (${PACOTES_INICIAIS.find((p) => p.id === pacote)
+                      ?.ambientes.map((a) => a.nome)
+                      .join(
+                        ", ",
+                      )}) com os serviços típicos. Depois é só informar as medidas e revisar.`}
+              </span>
+            </label>
+          ) : null}
           <label className="text-sm font-medium">
             Observações / premissas
             <textarea

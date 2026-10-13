@@ -16,7 +16,7 @@ async function run<R>(
 export const useCapitulos = () =>
   useQuery({
     queryKey: ["capitulos"],
-    queryFn: () => run(supabase.from("capitulos").select("*").order("codigo")),
+    queryFn: () => run(supabase.from("capitulos").select("*").order("ordem").order("codigo")),
   });
 export const useConfig = () =>
   useQuery({
@@ -103,6 +103,7 @@ export function useMut(table: T, invalidate: string[] = []) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tb = () => supabase.from(table) as any;
   return {
+    invalidar: () => Promise.all(invalidate.map((k) => qc.invalidateQueries({ queryKey: [k] }))),
     insert: useMutation({
       mutationFn: (v: Record<string, unknown> | Record<string, unknown>[]) =>
         run(tb().insert(v).select()),

@@ -1,10 +1,20 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { curvaABC, proximaRevisao, resumo, valorCotacao, type Capitulo, type Item } from "@/lib/calc";
+import {
+  curvaABC,
+  proximaRevisao,
+  resumo,
+  valorCotacao,
+  type Capitulo,
+  type Item,
+} from "@/lib/calc";
 
 // Usa os mesmos dados que o banco recebe (seed), para o teste falhar se o cálculo ou o seed mudarem.
-const sql = readFileSync(resolve(__dirname, "../../drizzle/migrations/0000_evf_schema_seed.sql"), "utf8");
+const sql = readFileSync(
+  resolve(__dirname, "../../drizzle/migrations/0000_evf_schema_seed.sql"),
+  "utf8",
+);
 
 function capitulos(): Capitulo[] {
   const linha = sql.split("\n").find((l) => l.startsWith("(1,'Serviços técnicos"));
@@ -19,7 +29,8 @@ function capitulos(): Capitulo[] {
 }
 
 function itens(): Item[] {
-  const re = /^\((\d+),(\d+),'([^']+)','([^']+)','([^']+)',([\d.]+),([\d.]+),([\d.]+),'(\w+)','\{([^}]*)\}'\)/gm;
+  const re =
+    /^\((\d+),(\d+),'([^']+)','([^']+)','([^']+)',([\d.]+),([\d.]+),([\d.]+),'(\w+)','\{([^}]*)\}'\)/gm;
   return [...sql.matchAll(re)].map((m) => {
     const cot = (m[10] ?? "").split(",").filter(Boolean).map(Number);
     const mat = cot.length ? (valorCotacao(cot, "media") ?? 0) : Number(m[7]);
@@ -40,6 +51,10 @@ function itens(): Item[] {
       ordem: Number(m[1]),
       criterio_cotacao: "media",
       justificativa: null,
+      chave: null,
+      base_qtd: null,
+      base_item_id: null,
+      fator: 1,
     };
   });
 }

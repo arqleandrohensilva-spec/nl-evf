@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { quantidadeVinculada, sugerir } from "@/lib/sugestoes";
 import { Copy, FileDown, Pencil, Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -29,10 +30,30 @@ function Page() {
   const { evf, itens, caps, cotacoes, config, mEvf } = d;
   const res = useMemo(() => resumo(itens, caps), [itens, caps]);
   const nAlertas = useMemo(
-    () => (evf ? auditar(evf, itens, caps, cotacoes).length : 0),
-    [evf, itens, caps, cotacoes],
+    () =>
+      evf
+        ? auditar(evf, itens, caps, cotacoes).length + sugerir(evf, itens, d.ambientes).length
+        : 0,
+    [evf, itens, caps, cotacoes, d.ambientes],
   );
   const [aba, setAba] = useState("escopo");
+
+  // Itens vinculados às medidas (ou a outro item) acompanham as mudanças automaticamente.
+  const pendentes = useRef(new Map<string, number>());
+  useEffect(() => {
+    for (const i of itens) {
+      const q = quantidadeVinculada(i, itens, d.ambientes, d.medicoes);
+      if (q == null) continue;
+      const atual = Number(i.quantidade);
+      if (Math.abs(q - atual) < 1e-6) {
+        pendentes.current.delete(i.id);
+        continue;
+      }
+      if (pendentes.current.get(i.id) === q) continue;
+      pendentes.current.set(i.id, q);
+      d.mItem.update.mutate({ id: i.id, quantidade: q });
+    }
+  }, [itens, d.ambientes, d.medicoes, d.mItem.update]);
   const [ocupado, setOcupado] = useState(false);
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -185,12 +206,12 @@ function Page() {
       <Tabs value={aba} onValueChange={setAba}>
         <TabsList className="no-print h-auto flex-wrap justify-start gap-1 bg-transparent p-0">
           {[
+            ["levantamento", "Ambientes e medidas"],
             ["escopo", "Escopo"],
             ["cotacoes", "Cotações"],
             ["resumo", "Resumo"],
             ["abc", "Curva ABC"],
             ["auditor", `Auditor${nAlertas ? ` (${nAlertas})` : ""}`],
-            ["levantamento", "Ambientes e levantamento"],
           ].map(([v, l]) => (
             <TabsTrigger
               key={v}

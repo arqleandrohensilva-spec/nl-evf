@@ -7,6 +7,7 @@ import { resumo } from "@/lib/calc";
 import { fmtData, fmtPct, fmtR } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { EvfFormDialog } from "@/components/evf/EvfForm";
+import { aplicarPacote } from "@/lib/actions";
 
 export const Route = createFileRoute("/_authenticated/evfs/")({
   head: () => ({
@@ -42,7 +43,8 @@ function Page() {
           textoBotao="Criar e abrir"
           config={config}
           trigger={<Button className="h-11">Novo EVF</Button>}
-          onSubmit={async (d) => {
+          comPacote
+          onSubmit={async (d, pacote) => {
             const [novo] = await run(
               supabase
                 .from("evfs")
@@ -50,12 +52,7 @@ function Page() {
                 .select(),
             );
             if (!novo) return;
-            await run(
-              supabase
-                .from("ambientes")
-                .insert({ evf_id: novo.id, nome: "Ambiente 1", ordem: 1 })
-                .select(),
-            );
+            await aplicarPacote(novo.id, pacote);
             await qc.invalidateQueries({ queryKey: ["evfs"] });
             toast.success("EVF criado.");
             nav({ to: "/evfs/$id", params: { id: novo.id } });

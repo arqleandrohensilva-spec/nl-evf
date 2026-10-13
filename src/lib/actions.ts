@@ -11,6 +11,9 @@ import {
   type Item,
 } from "@/lib/calc";
 import { run } from "@/lib/data";
+import type { TablesInsert } from "@/integrations/supabase/types";
+import { PACOTES_INICIAIS } from "@/lib/biblioteca";
+import { linhasDoModelo, normaliza } from "@/lib/sugestoes";
 
 /** Copia o EVF inteiro (ambientes, medições, itens e cotações) como uma nova revisão. Retorna o id novo. */
 export async function duplicarEvf(evfId: string): Promise<string> {
@@ -257,4 +260,59 @@ export async function exportarXlsx(
   add("5_CURVA ABC", abcAoa, [8, 58, 7, 9, 14, 10, 12, 8]);
   const nome = `EVF_${(evf.obra || "obra").replace(/[^\w-]+/g, "_")}_${evf.revisao}.xlsx`;
   XLSX.writeFile(wb, nome);
+}
+
+type LinhaNova = Omit<TablesInsert<"itens_evf">, "evf_id" | "codigo" | "ordem">;
+
+/** Insere itens novos numerando o código dentro de cada capítulo (ex.: 5.3, 5.4…). */
+export async function inserirItens(evfId: string, linhas: LinhaNova[], existentes: Item[]) {
+  if (!linhas.length) return [];
+  const proximo = new Map<number, number>();
+  for (const i of existentes) {
+    const p = i.codigo.split(".");
+    if (p.length === 2 && Number(p[0]) === i.capitulo_codigo)
+      proximo.set(
+        i.capitulo_codigo,
+        Math.max(proximo.get(i.capitulo_codigo) ?? 0, Number(p[1]) || 0),
+      );
+  }
+  let ordem = existentes.reduce((m, i) => Math.max(m, i.ordem), 0);
+  const rows = linhas.map((l) => {
+    const n = (proximo.get(l.capitulo_codigo) ?? 0) + 1;
+    proximo.set(l.capitulo_codigo, n);
+    ordem += 1;
+    return { ...l, evf_id: evfId, codigo: `${l.capitulo_codigo}.${n}`, ordem };
+  });
+  return run(supabase.from("itens_evf").insert(rows).select());
+}
+
+/** Preço do catálogo pela descrição (igual, sem acento/maiúscula). */
+export function buscadorDePreco(
+  catalogo: { descricao: string; material_unit: number; mo_unit: number }[],
+) {
+  const mapa = new Map(catalogo.map((c) => [normaliza(c.descricao), c]));
+  return (desc: string) => {
+    const c = mapa.get(normaliza(desc));
+    return c ? { material_unit: Number(c.material_unit), mo_unit: Number(c.mo_unit) } : null;
+  };
+}
+
+/** Cria os ambientes e os itens de um pacote inicial (Novo EVF). */
+export async function aplicarPacote(evfId: string, pacoteId: string) {
+  const pacote = PACOTES_INICIAIS.find((p) => p.id === pacoteId) ?? PACOTES_INICIAIS[0];
+  if (!pacote) return;
+  const catalogo = await run(
+    supabase.from("catalogo_servicos").select("descricao, material_unit, mo_unit"),
+  );
+  const preco = buscadorDePreco(catalogo);
+  const linhas: LinhaNova[] = [];
+  let ordem = 1;
+  for (const a of pacote.ambientes) {
+    const [amb] = await run(
+      supabase.from("ambientes").insert({ evf_id: evfId, nome: a.nome, ordem: ordem++ }).select(),
+    );
+    if (amb && a.modelo) linhas.push(...linhasDoModelo(a.modelo, amb, [], preco));
+  }
+  if (pacote.geral) linhas.push(...linhasDoModelo(pacote.geral, null, [], preco));
+  await inserirItens(evfId, linhas, []);
 }

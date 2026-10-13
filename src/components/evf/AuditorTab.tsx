@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { auditar } from "@/lib/calc";
 import { cn } from "@/lib/utils";
 import type { EvfData } from "./useEvfData";
+import { SugestoesPainel } from "./SugestoesPainel";
 
 export function AuditorTab({ d }: { d: EvfData }) {
   const { evf, itens, caps, cotacoes } = d;
@@ -19,6 +20,7 @@ export function AuditorTab({ d }: { d: EvfData }) {
         Conferência automática antes de apresentar o EVF. Os alertas são sugestões: confira e
         corrija na aba indicada.
       </p>
+      <SugestoesPainel d={d} />
       {!alertas.length ? (
         <div className="card flex items-center gap-3 p-5 text-primary">
           <CheckCircle2 className="size-5" /> Nenhum alerta. O EVF passou nas conferências

@@ -82,7 +82,9 @@ export function resumo(itens: Item[], caps: Capitulo[]) {
     r.mo += t.mo;
     r.total += t.total;
   }
-  const capitulos = [...map.values()].sort((a, b) => a.codigo - b.codigo);
+  const capitulos = [...map.values()].sort(
+    (a, b) => (a.cap?.ordem ?? 999) - (b.cap?.ordem ?? 999) || a.codigo - b.codigo,
+  );
   for (const c of capitulos) c.taxa = c.total * ((c.taxaPct ?? 0) / 100);
   const direto = capitulos.reduce((s, c) => s + c.total, 0);
   const taxas = capitulos.reduce((s, c) => s + c.taxa, 0);
@@ -176,27 +178,48 @@ export function auditar(evf: Evf, itens: Item[], caps: Capitulo[], cotacoes: Cot
       titulo: `Data-base com ${meses} meses`,
       detalhe: `Os preços são de ${evf.data_base.split("-").reverse().join("/")}. Sugestão: reajustar pelo INCC acumulado no período ou recotar os itens principais.`,
     });
+  const poucasCot: Item[] = [];
+  const semQtd: Item[] = [];
+  const semPreco: Item[] = [];
   for (const i of sortItens(itens)) {
     if (i.tipo_preco === "cotacao") {
       const nc = cotacoes.filter((c) => c.item_id === i.id && Number(c.valor) > 0).length;
-      if (nc < 3)
-        out.push({
-          nivel: "medio",
-          titulo: `${i.codigo} ${i.descricao}: só ${nc} cotação(ões)`,
-          detalhe: "Itens por cotação devem ter 3 propostas para comparação.",
-        });
+      if (nc < 3) poucasCot.push(i);
     }
-    if (itemTotais(i).total === 0)
-      out.push({
-        nivel: "medio",
-        titulo: `${i.codigo} ${i.descricao}: total zero`,
-        detalhe: "Verifique quantidade e preços unitários.",
-      });
+    if (n(i.quantidade) === 0) semQtd.push(i);
+    else if (n(i.material_unit) + n(i.mo_unit) === 0) semPreco.push(i);
   }
+  const lista = (xs: Item[]) =>
+    xs
+      .slice(0, 12)
+      .map((i) => `${i.codigo} ${i.descricao}`)
+      .join("; ") + (xs.length > 12 ? `; e mais ${xs.length - 12}` : "");
+  if (semQtd.length)
+    out.push({
+      nivel: "alto",
+      titulo: `${semQtd.length} ${semQtd.length === 1 ? "item sem quantidade" : "itens sem quantidade"}`,
+      detalhe: `Informe as medidas do ambiente (aba Ambientes e medidas) ou digite a quantidade: ${lista(semQtd)}.`,
+    });
+  if (semPreco.length)
+    out.push({
+      nivel: "medio",
+      titulo: `${semPreco.length} ${semPreco.length === 1 ? "item a cotar" : "itens a cotar"} (sem preço)`,
+      detalhe: `Cadastre o preço no catálogo ou lance cotações: ${lista(semPreco)}.`,
+    });
+  if (poucasCot.length)
+    out.push({
+      nivel: "medio",
+      titulo: `${poucasCot.length} ${poucasCot.length === 1 ? "item com" : "itens com"} menos de 3 cotações`,
+      detalhe: `Itens por cotação devem ter 3 propostas para comparação: ${lista(poucasCot)}.`,
+    });
   const demo = caps.find((c) => /demoli/i.test(c.nome));
   if (demo) {
     const di = itens.filter((i) => i.capitulo_codigo === demo.codigo);
-    const verbas = di.filter((i) => i.tipo_preco === "verba");
+    const verbas = di.filter(
+      (i) =>
+        i.tipo_preco === "verba" &&
+        /m[aã]o de obra|demoli[cç][oõ]es e retiradas|geral|global/i.test(i.descricao),
+    );
     const medidos = di.filter((i) => i.tipo_preco !== "verba" && /m²|m2|un|m³|m$/i.test(i.unidade));
     if (verbas.length && medidos.length)
       out.push({
