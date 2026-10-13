@@ -159,3 +159,17 @@ describe("regras por tipo de ambiente", () => {
     expect(s.map((x) => x.ambienteId)).toEqual(["b"]);
   });
 });
+
+describe("modelo banheiro coletivo", () => {
+  it("2,30 × 2,68 m, pé-direito 2,27 m, 2,92 m² de vãos (Brisa do Parque)", () => {
+    const b = amb("bf", "Banheiro Feminino", 2.3, 2.68, 2.27, 2.92);
+    const linhas = linhasDoModelo("banheiro_coletivo", b, [], () => null);
+    expect(linhas.find((l) => l.chave === "piso")?.quantidade).toBeCloseTo(6.164, 2);
+    expect(linhas.find((l) => l.chave === "parede_rev")?.quantidade).toBeCloseTo(
+      9.96 * 2.27 - 2.92,
+      2,
+    );
+    expect(linhas.some((l) => l.chave === "chuveiro" || l.chave === "box")).toBe(false);
+    expect(linhas.some((l) => l.chave === "barras_apoio")).toBe(true);
+  });
+});
