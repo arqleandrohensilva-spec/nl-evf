@@ -375,6 +375,8 @@ export function interpretar(
 
   let alturaParede: number | null = null;
   let supAnterior: Sup[] = [];
+  // O que a frase anterior pediu, para "o mesmo da parede" repetir na parede.
+  let anterior = { removeu: false, nivelou: false };
   const frases = texto
     .split(/[\n.;!?]+/)
     .map((t) => t.trim())
@@ -437,6 +439,36 @@ export function interpretar(
         );
       ok();
     }
+
+    const mesmoNaParede = /\bo mesm[oa] (da|na|nas|das|para a|pra|com a) paredes?\b/.test(ativo);
+    if (mesmoNaParede) {
+      ok();
+      if (anterior.removeu) {
+        const p = paredeAte(H);
+        propor(
+          "rem_parede",
+          frase,
+          "“O mesmo da parede”: tirar o revestimento existente, como no piso.",
+          {
+            qtd: p.qtd,
+            base: p.base,
+            ...(H && H < pd
+              ? {
+                  desc: `Remoção do revestimento existente da parede até ${fmt(H)} m (confira a altura do azulejo atual)${amb ? ` – ${amb.nome}` : ""}`,
+                  especifico: true,
+                }
+              : {}),
+          },
+        );
+      }
+      if (anterior.nivelou)
+        propor(
+          "regularizacao_reboco",
+          frase,
+          "“O mesmo da parede”: deixar a parede plana, como o piso.",
+        );
+    }
+    const agora = { removeu: RE.remover.test(ativo), nivelou: RE.nivelar.test(ativo) };
 
     if (ativo) {
       const alvo = alvos(ativo, sups);
@@ -782,6 +814,7 @@ export function interpretar(
       }
     }
     if (!reconheceu && props.size + remover.length === antes) naoEntendi.push(frase);
+    if (agora.removeu || agora.nivelou) anterior = agora;
   }
 
   // Serviços que dependem de medidas não fazem sentido sem ambiente.

@@ -1574,6 +1574,14 @@ export interface Regra {
 
 export const REGRAS: Regra[] = [
   {
+    id: "piso_soleira",
+    se: ["piso"],
+    precisa: ["soleira"],
+    sugere: "soleira",
+    escopo: "ambiente",
+    motivo: "Piso novo muda o nível na porta: prever soleira (ou perfil de transição).",
+  },
+  {
     id: "alv_chapisco",
     se: ["alvenaria"],
     precisa: ["chapisco"],

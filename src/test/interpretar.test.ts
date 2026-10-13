@@ -124,6 +124,9 @@ describe("interpretar o que será feito", () => {
     );
     expect(r.propostas.find((p) => p.chave === "imperm_parede")?.descricao).toMatch(/até 1,75 m/);
     expect(r.avisos.join()).not.toMatch(/Faltou a altura/);
+    // "o mesmo da parede" repete na parede o que foi pedido para o piso
+    expect(ch).toContain("rem_parede");
+    expect(ch).toContain("regularizacao_reboco");
   });
 
   it("frases sem serviço reconhecido voltam como 'não entendi'", () => {
