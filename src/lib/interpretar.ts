@@ -28,7 +28,24 @@ export interface Proposta {
   antes?: string;
   trecho: string;
   motivo: string;
+  /** Serviço da obra toda (vai para Itens gerais mesmo quando escrito num ambiente). */
+  obraToda?: boolean;
 }
+
+/** Serviços que pertencem à obra toda, não a um ambiente. */
+const OBRA_TODA = new Set([
+  "gestao_mensal",
+  "seguro_obra",
+  "rrt",
+  "aprovacao_condominio",
+  "cacamba",
+  "protecao_piso",
+  "limpeza_final",
+  "material_limpeza",
+  "impressao_projetos",
+  "isolamento_area",
+  "frete",
+]);
 
 export interface Interpretacao {
   propostas: Proposta[];
@@ -91,7 +108,17 @@ const RE = {
   aguaFria: /\b(ponto de agua|agua fria)\b/,
   aguaQuente: /\bagua quente\b/,
   esgoto: /\b(ponto de esgoto|esgoto)\b/,
-  baseRegistro: /\b(base do registro|base de registro|trocar (o )?registro)\b/,
+  baseRegistro: /\b(base (do|de|dos|das) registros?|trocar (o |os )?registros?)\b/,
+  rasgos: /\brasgos?\b/,
+  estanqueidade: /\bestanqueidade\b/,
+  rejunte: /\brejuntes?\b/,
+  mictorio: /\bmictorios?\b/,
+  entulho: /\b(entulho|ensac\w*)\b/,
+  isolamento: /\b(isolamento|isolar|tapume|fechamento provisorio)\b/,
+  sinalizacao: /\bsinaliza\w*/,
+  frete: /\bfretes?\b/,
+  impressao: /\bimpress\w*/,
+  ajustePorta: /\b(ajust\w*|revis\w*|regul\w*|aparar|consert\w*)\b/,
   bancada: /\b(bancada|bancadas|tampo|granito|marmore|quartzo)\b/,
   nicho: /\bnichos?\b/,
   soleira: /\bsoleiras?\b/,
@@ -105,7 +132,7 @@ const RE = {
   marcenaria: /\b(armario|armarios|marcenaria|gabinete)\b/,
   dispensers: /\b(dispensers?|saboneteira|papeleira|toalheiro|porta[- ]papel)\b/,
   lixeira: /\blixeiras?\b/,
-  cacamba: /\b(cacamba|entulho)\b/,
+  cacamba: /\bcacambas?\b/,
   protecao: /\b(proteger|protecao|salva[- ]?piso)\b/,
   limpeza: /\blimpeza\b/,
   gestao: /\b(gestao|administracao|gerenciamento)\b/,
@@ -315,6 +342,8 @@ export function interpretar(
     if (props.has(chave)) return;
     const s = SERVICO[chave];
     if (!s) return;
+    const obraToda = OBRA_TODA.has(chave) && amb != null;
+    if (obraToda) o = { ...o, base: null };
     const ambBase = s.base && s.base !== "manual" && s.base !== "item" ? s.base : null;
     let base: Base | null = o.base !== undefined ? o.base : amb ? ambBase : null;
     if (!geo) base = null;
@@ -343,6 +372,7 @@ export function interpretar(
       trecho,
       motivo,
     });
+    if (obraToda) props.get(chave)!.obraToda = true;
     if (o.especifico) especificas.add(chave);
   }
 
@@ -473,6 +503,8 @@ export function interpretar(
     if (ativo) {
       const alvo = alvos(ativo, sups);
       const removeu = RE.remover.test(ativo);
+      // Frase só de retirada ("retirada de louças, torneira e espelho") não pede itens novos.
+      const soRemocao = removeu && !RE.novo.test(ativo);
 
       if (removeu) {
         ok();
@@ -628,7 +660,7 @@ export function interpretar(
         propor(/gesso/.test(ativo) ? "forro_gesso" : "forro_drywall", frase, "Forro novo.");
         if (/\btroc/.test(ativo)) propor("rem_forro", frase, "Trocar o forro: tirar o existente.");
       }
-      if (RE.ralo.test(ativo)) {
+      if (RE.ralo.test(ativo) && !soRemocao) {
         ok();
         if (RE.raloAcao.test(ativo) || /arrum/.test(ativo))
           propor("adequacao_ralo", frase, "Arrumar o ralo e acertar ao nível do piso novo.");
@@ -655,12 +687,21 @@ export function interpretar(
         if (/\b(nov[oa]s?|trocar|substituir)\b/.test(ativo))
           propor("rem_loucas", frase, "Louças novas: tirar as existentes.");
       }
-      if (RE.metais.test(ativo)) {
+      if (RE.metais.test(ativo) && !soRemocao) {
         ok();
         if (/torneira|misturador|metais/.test(ativo))
-          propor(cozinha ? "torneira_cozinha" : "torneira", frase, "Metais novos.", {
-            qtd: quantidadeNoTexto(ativo, "torneiras?"),
-          });
+          propor(
+            cozinha
+              ? "torneira_cozinha"
+              : /automatic|temporizad/.test(ativo)
+                ? "torneira_temporizada"
+                : "torneira",
+            frase,
+            "Metais novos.",
+            {
+              qtd: quantidadeNoTexto(ativo, "torneiras?"),
+            },
+          );
         if (/registro|metais/.test(ativo) && !RE.baseRegistro.test(ativo))
           propor("acab_registro", frase, "Acabamento de registro novo.");
         if (/ducha/.test(ativo)) propor("ducha", frase, "Ducha higiênica.");
@@ -670,22 +711,22 @@ export function interpretar(
         ok();
         propor("troca_registro", frase, "Trocar a base do registro.");
       }
-      if (RE.tomada.test(ativo)) {
+      if (RE.tomada.test(ativo) && !soRemocao) {
         ok();
         propor("ponto_tomada", frase, "Tomada nova.", {
           qtd: quantidadeNoTexto(ativo, "tomadas?"),
         });
       }
-      if (RE.interruptor.test(ativo)) {
+      if (RE.interruptor.test(ativo) && !soRemocao) {
         ok();
         propor("ponto_interruptor", frase, "Interruptor novo.", {
           qtd: quantidadeNoTexto(ativo, "interruptor(?:es)?"),
         });
       }
-      if (RE.fitaLed.test(ativo)) {
+      if (RE.fitaLed.test(ativo) && !soRemocao) {
         ok();
         propor("fita_led", frase, "Fita de LED.");
-      } else if (RE.iluminacao.test(ativo)) {
+      } else if (RE.iluminacao.test(ativo) && !soRemocao) {
         ok();
         const q = quantidadeNoTexto(ativo, "luminarias?|spots?|lampadas?|pendentes?|plafons?");
         propor("luminaria", frase, "Iluminação nova.", { qtd: q });
@@ -715,15 +756,15 @@ export function interpretar(
         ok();
         propor(cozinha ? "bancada_cozinha" : "bancada_banheiro", frase, "Bancada nova.");
       }
-      if (RE.nicho.test(ativo)) {
+      if (RE.nicho.test(ativo) && !soRemocao) {
         ok();
         propor("nicho", frase, "Nicho.");
       }
-      if (RE.soleira.test(ativo)) {
+      if (RE.soleira.test(ativo) && !soRemocao) {
         ok();
         propor("soleira", frase, "Soleira.");
       }
-      if (RE.espelho.test(ativo)) {
+      if (RE.espelho.test(ativo) && !soRemocao) {
         ok();
         propor("espelho", frase, "Espelho.", { qtd: quantidadeNoTexto(ativo, "espelhos?") });
       }
@@ -731,7 +772,16 @@ export function interpretar(
         ok();
         propor("box", frase, "Box novo.");
       }
-      if (RE.porta.test(ativo) && !(removeu && !RE.novo.test(ativo))) {
+      if (RE.porta.test(ativo) && RE.ajustePorta.test(ativo) && !/\bporta nova\b/.test(ativo)) {
+        ok();
+        propor("ajuste_porta", frase, "A porta fica: ajustar ao piso novo e revisar ferragens.");
+      } else if (
+        RE.porta.test(ativo) &&
+        (RE.pcd.test(ativo) ||
+          /\b(porta nova|nova porta|portas novas|trocar (a |as )?portas?|troca da porta|substituir (a )?porta|instalar (a |uma )?porta|colocar (a |uma )?porta)\b/.test(
+            ativo,
+          ))
+      ) {
         ok();
         propor(RE.pcd.test(ativo) ? "porta_acessivel" : "porta_interna", frase, "Porta nova.", {
           qtd: quantidadeNoTexto(ativo, "portas?"),
@@ -769,13 +819,59 @@ export function interpretar(
           "Marcenaria.",
         );
       }
-      if (RE.dispensers.test(ativo)) {
+      if (RE.dispensers.test(ativo) && !soRemocao) {
         ok();
         propor("dispensers", frase, "Dispensers / acessórios.");
       }
-      if (RE.lixeira.test(ativo)) {
+      if (RE.lixeira.test(ativo) && !soRemocao) {
         ok();
         propor("lixeira", frase, "Lixeira.");
+      }
+      if (RE.rasgos.test(ativo)) {
+        ok();
+        propor("fechamento_rasgos", frase, "Fechar os rasgos das instalações antes do reboco.");
+      }
+      if (RE.estanqueidade.test(ativo)) {
+        ok();
+        propor("teste_estanqueidade", frase, "Teste de estanqueidade antes do revestimento.");
+      }
+      if (RE.rejunte.test(ativo)) {
+        ok();
+        if (/epox/.test(ativo) && geo) {
+          const parede = alturaParede ? paredeAte(alturaParede).qtd : 0;
+          propor("rejunte_epoxi", frase, "Rejunte epóxi no piso e na parede revestida.", {
+            qtd: geo.piso + parede,
+            base: null,
+          });
+        }
+      }
+      if (RE.mictorio.test(ativo)) {
+        ok();
+        propor("mictorio", frase, "Mictório.", { qtd: quantidadeNoTexto(ativo, "mictorios?") });
+      }
+      if (RE.entulho.test(ativo)) {
+        ok();
+        propor(
+          "transporte_entulho",
+          frase,
+          "A caçamba não inclui ensacar e levar o entulho até ela.",
+        );
+      }
+      if (RE.isolamento.test(ativo)) {
+        ok();
+        propor("isolamento_area", frase, "Isolar a área em obra (área comum com circulação).");
+      }
+      if (RE.sinalizacao.test(ativo) && !RE.isolamento.test(ativo)) {
+        ok();
+        propor("isolamento_area", frase, "Sinalizar a área em obra.");
+      }
+      if (RE.impressao.test(ativo)) {
+        ok();
+        propor("impressao_projetos", frase, "Impressão de projetos para a equipe.");
+      }
+      if (RE.frete.test(ativo)) {
+        ok();
+        propor("frete", frase, "Fretes de material.");
       }
       if (RE.cacamba.test(ativo)) {
         ok();
@@ -832,8 +928,9 @@ export function interpretar(
   // Compara com o que já está no escopo do ambiente.
   const out: Proposta[] = [];
   for (const p of props.values()) {
+    const alvoId = p.obraToda ? null : (amb?.id ?? null);
     const ex = itens.find(
-      (i) => (i.ambiente_id ?? null) === (amb?.id ?? null) && p.chave && itemEh(i, p.chave),
+      (i) => (i.ambiente_id ?? null) === alvoId && p.chave && itemEh(i, p.chave),
     );
     if (!ex) {
       out.push(p);

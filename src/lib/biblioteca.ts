@@ -86,6 +86,15 @@ export const SERVICOS: Servico[] = [
   }),
   // 2 Preliminares
   S({
+    chave: "frete",
+    cap: 2,
+    desc: "Fretes de material",
+    un: "vb",
+    tipo: "verba",
+    qtd: 1,
+    match: /\bfrete/,
+  }),
+  S({
     chave: "seguro_obra",
     cap: 2,
     desc: "Seguro de obra",
@@ -159,6 +168,15 @@ export const SERVICOS: Servico[] = [
     tipo: "cotacao",
     fator: 1.1,
     match: /salva.?piso|papelao|protecao de piso/,
+  }),
+  S({
+    chave: "isolamento_area",
+    cap: 3,
+    desc: "Isolamento e sinalização da área em obra (fechamento provisório e placas)",
+    un: "vb",
+    tipo: "verba",
+    qtd: 1,
+    match: /isolamento da area|fechamento provisorio/,
   }),
   S({
     chave: "lona",
@@ -267,6 +285,15 @@ export const SERVICOS: Servico[] = [
     tipo: "composicao",
     mo: 100,
     match: /remocao (de|do) box/,
+  }),
+  S({
+    chave: "transporte_entulho",
+    cap: 4,
+    desc: "Ensacamento e transporte do entulho até a caçamba",
+    un: "vb",
+    tipo: "verba",
+    qtd: 1,
+    match: /transporte (do |de )?entulho|ensacamento/,
   }),
   S({
     chave: "rem_esquadria",
@@ -670,6 +697,15 @@ export const SERVICOS: Servico[] = [
     match: /porta interna|kit porta/,
   }),
   S({
+    chave: "ajuste_porta",
+    cap: 22,
+    desc: "Ajuste da porta ao novo nível do piso e revisão de ferragens",
+    un: "un",
+    tipo: "composicao",
+    qtd: 1,
+    match: /ajuste da porta|revisao (da porta|de ferragens)/,
+  }),
+  S({
     chave: "porta_externa",
     cap: 22,
     desc: "Porta externa",
@@ -748,6 +784,14 @@ export const SERVICOS: Servico[] = [
     match: /acabamento do topo|perfil.*revestimento|cantoneira/,
   }),
   S({
+    chave: "rejunte_epoxi",
+    cap: 9,
+    desc: "Rejunte epóxi (diferença sobre o rejunte comum)",
+    un: "m²",
+    tipo: "cotacao",
+    match: /rejunte epoxi/,
+  }),
+  S({
     chave: "rodape",
     cap: 9,
     desc: "Rodapé",
@@ -813,6 +857,16 @@ export const SERVICOS: Servico[] = [
     mo: 200,
     qtd: 1,
     match: /vaso sanitario|bacia/,
+  }),
+  S({
+    chave: "mictorio",
+    cap: 10,
+    desc: "Mictório com válvula de descarga",
+    un: "un",
+    tipo: "cotacao",
+    mo: 200,
+    qtd: 1,
+    match: /mictorio/,
   }),
   S({
     chave: "cuba",

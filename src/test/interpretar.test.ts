@@ -129,6 +129,55 @@ describe("interpretar o que será feito", () => {
     expect(ch).toContain("regularizacao_reboco");
   });
 
+  it("escopo detalhado: mictório, rejunte epóxi, ajuste de porta e caçamba na obra toda", () => {
+    const t =
+      "Ensacamento e transporte do entulho até a caçamba. Troca da base dos registros. Fechamento de rasgos das instalações. Teste de estanqueidade com lâmina d'água. Parede com o mesmo porcelanato até 1,75 m. Rejunte epóxi. Mictório com válvula. Torneira de fechamento automático. Ajuste da porta ao piso novo e revisão da fechadura.";
+    const r = interpretar(t, wc, [porta], []);
+    const ch = r.propostas.map((p) => p.chave);
+    expect(ch).toEqual(
+      expect.arrayContaining([
+        "transporte_entulho",
+        "cacamba",
+        "troca_registro",
+        "fechamento_rasgos",
+        "teste_estanqueidade",
+        "rejunte_epoxi",
+        "mictorio",
+        "torneira_temporizada",
+        "ajuste_porta",
+      ]),
+    );
+    expect(ch).not.toContain("porta_interna");
+    expect(r.propostas.find((p) => p.chave === "cacamba")?.obraToda).toBe(true);
+    expect(r.propostas.find((p) => p.chave === "rejunte_epoxi")?.quantidade).toBeCloseTo(
+      6.164 + 9.06 * 1.75,
+      2,
+    );
+    expect(r.naoEntendi).toEqual([]);
+  });
+
+  it("obra toda: documentação, canteiro e logística", () => {
+    const t =
+      "Plano de reforma aprovado pelo síndico e RRT de execução. Gestão da obra por 2 meses. Seguro de obra e impressão de projetos. Isolamento da área e sinalização. Proteção do trajeto até a caçamba. Fretes de material. Limpeza pós-obra.";
+    const r = interpretar(t, null, [], []);
+    expect(r.propostas.map((p) => p.chave)).toEqual(
+      expect.arrayContaining([
+        "aprovacao_condominio",
+        "rrt",
+        "gestao_mensal",
+        "seguro_obra",
+        "impressao_projetos",
+        "isolamento_area",
+        "protecao_piso",
+        "cacamba",
+        "frete",
+        "limpeza_final",
+      ]),
+    );
+    expect(r.propostas.find((p) => p.chave === "gestao_mensal")?.quantidade).toBe(2);
+    expect(r.naoEntendi).toEqual([]);
+  });
+
   it("frases sem serviço reconhecido voltam como 'não entendi'", () => {
     const r = interpretar("A síndica pediu capricho. Trocar 2 tomadas.", wc, [], []);
     expect(r.naoEntendi).toEqual(["A síndica pediu capricho"]);

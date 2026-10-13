@@ -180,7 +180,7 @@ function PropostasDialog({
             preco(p.descricao) ??
             (p.chave && SERVICO[p.chave] ? preco(SERVICO[p.chave]!.desc) : null);
           return {
-            ambiente_id: ambienteId,
+            ambiente_id: p.obraToda ? null : ambienteId,
             capitulo_codigo: p.capitulo,
             descricao: p.descricao,
             unidade: p.unidade,
@@ -280,6 +280,7 @@ function PropostasDialog({
                             <span className="num text-sm text-muted-foreground">
                               {fmtN(p.quantidade)} {p.unidade}
                               {p.base_qtd ? " · ligado às medidas" : ""}
+                              {p.obraToda ? " · vai para Itens gerais" : ""}
                             </span>
                           ) : null}
                         </span>
