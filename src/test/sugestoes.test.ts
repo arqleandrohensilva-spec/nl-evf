@@ -18,6 +18,7 @@ const evf = (tipo: string): Evf => ({
   observacoes: "",
   created_at: "",
   sugestoes_ignoradas: [],
+  descricao_obra: null,
 });
 
 const amb = (id: string, nome: string, c = 0, l = 0, pd = 2.6, vaos = 0): Ambiente => ({
@@ -29,6 +30,7 @@ const amb = (id: string, nome: string, c = 0, l = 0, pd = 2.6, vaos = 0): Ambien
   largura: l,
   pe_direito: pd,
   area_vaos: vaos,
+  descricao_servico: null,
 });
 
 let seq = 0;

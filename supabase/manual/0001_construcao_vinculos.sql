@@ -24,3 +24,7 @@ alter table public.itens_evf add column if not exists link text;
 
 -- Medições: profundidade e tipo (soma | vao | shaft_canto | shaft_parede) (2026-10-13)
 alter table public.medicoes add column if not exists profundidade numeric not null default 0, add column if not exists tipo text;
+
+-- "O que será feito" por ambiente e na obra toda (2026-10-13)
+alter table public.ambientes add column if not exists descricao_servico text;
+alter table public.evfs add column if not exists descricao_obra text;

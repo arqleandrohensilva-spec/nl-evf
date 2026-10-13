@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Wand2 } from "lucide-react";
+import { MessageSquareText, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { efeitoMedicao, tipoMedicao, totalMedicao, type Ambiente, type Medicao } from "@/lib/calc";
@@ -10,6 +10,7 @@ import { useCatalogo } from "@/lib/data";
 import { geometria, linhasDoModelo } from "@/lib/sugestoes";
 import { NumCell, SelectCell, TextCell } from "./cells";
 import type { EvfData } from "./useEvfData";
+import { OQueSeraFeito } from "./OQueSeraFeito";
 
 const TIPOS = [
   { value: "soma", label: "+ trecho (soma)" },
@@ -36,8 +37,7 @@ function efeitoTexto(m: Medicao) {
 export function LevantamentoTab({ d }: { d: EvfData }) {
   const { evf, ambientes, medicoes, mAmb, mMed, itens, mItem } = d;
   const [novo, setNovo] = useState("");
-  const [geral, setGeral] = useState("");
-  const [geralAmb, setGeralAmb] = useState("");
+  const [alvo, setAlvo] = useState("");
   const catalogo = useCatalogo().data ?? [];
   if (!evf) return null;
 
@@ -83,50 +83,7 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
         detalhadas, portas e janelas (“− vão”) saem das paredes, e shafts ou pilares saem do piso e
         do teto. Para formatos irregulares, lance trechos como “+ trecho”.
       </p>
-      <div className="card flex flex-wrap items-center gap-2 p-3">
-        <Wand2 className="size-4 text-primary" aria-hidden />
-        <span className="text-sm font-medium">Itens gerais da obra:</span>
-        <select
-          className="field h-10 w-72"
-          value={geral}
-          onChange={(e) => setGeral(e.target.value)}
-          aria-label="Modelo de itens gerais"
-        >
-          <option value="">Escolha um modelo…</option>
-          {MODELOS.filter((m) => m.para === "obra").map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.nome}
-            </option>
-          ))}
-        </select>
-        <select
-          className="field h-10 w-60"
-          value={geralAmb}
-          onChange={(e) => setGeralAmb(e.target.value)}
-          aria-label="Ambiente dos itens gerais"
-        >
-          <option value="">para a obra toda (Itens gerais)</option>
-          {ambientes.map((a) => (
-            <option key={a.id} value={a.id}>
-              para {a.nome}
-            </option>
-          ))}
-        </select>
-        <Button
-          variant="outline"
-          className="h-10"
-          disabled={!geral}
-          onClick={async () => {
-            await aplicar(geral, ambientes.find((a) => a.id === geralAmb) ?? null);
-            setGeral("");
-          }}
-        >
-          Adicionar ao Escopo
-        </Button>
-        <span className="text-xs text-muted-foreground">
-          {MODELOS.find((m) => m.id === geral)?.descricao ?? ""}
-        </span>
-      </div>
+      <OQueSeraFeito d={d} alvo={alvo} setAlvo={setAlvo} />
 
       {ambientes.map((a) => {
         const ms = medicoes.filter((m) => m.ambiente_id === a.id);
@@ -158,6 +115,20 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                 </button>
               </div>
             </div>
+            <button
+              type="button"
+              className="mt-2 flex w-full items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-left text-sm hover:bg-primary-soft"
+              onClick={() => {
+                setAlvo(a.id);
+                document.getElementById("o-que-sera-feito")?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              <MessageSquareText className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+              <span className={a.descricao_servico ? "line-clamp-2" : "text-muted-foreground"}>
+                {a.descricao_servico ||
+                  "Escrever o que será feito aqui e receber a proposta de serviços…"}
+              </span>
+            </button>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {(
                 [

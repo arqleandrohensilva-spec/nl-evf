@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       ambientes: {
         Row: {
+          descricao_servico: string | null
           area_vaos: number
           comprimento: number
           largura: number
@@ -26,6 +27,7 @@ export type Database = {
           ordem: number
         }
         Insert: {
+          descricao_servico?: string | null
           area_vaos?: number
           comprimento?: number
           largura?: number
@@ -36,6 +38,7 @@ export type Database = {
           ordem?: number
         }
         Update: {
+          descricao_servico?: string | null
           area_vaos?: number
           comprimento?: number
           largura?: number
@@ -188,6 +191,7 @@ export type Database = {
       }
       evfs: {
         Row: {
+          descricao_obra: string | null
           sugestoes_ignoradas: Json
           area_m2: number
           cidade_uf: string | null
@@ -205,6 +209,7 @@ export type Database = {
           tipo_obra: string
         }
         Insert: {
+          descricao_obra?: string | null
           sugestoes_ignoradas?: Json
           area_m2?: number
           cidade_uf?: string | null
@@ -222,6 +227,7 @@ export type Database = {
           tipo_obra?: string
         }
         Update: {
+          descricao_obra?: string | null
           sugestoes_ignoradas?: Json
           area_m2?: number
           cidade_uf?: string | null

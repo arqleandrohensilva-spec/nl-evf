@@ -210,7 +210,7 @@ export const SERVICOS: Servico[] = [
     tipo: "composicao",
     mo: 30,
     base: "piso",
-    match: /remocao (de|do) (revestimento .*piso|piso)/,
+    match: /remocao .*piso/,
   }),
   S({
     chave: "rem_parede",
@@ -220,7 +220,7 @@ export const SERVICOS: Servico[] = [
     tipo: "composicao",
     mo: 30,
     base: "paredes",
-    match: /remocao (de|do) revestimento .*parede/,
+    match: /remocao .*(parede|azulejo)/,
   }),
   S({
     chave: "rem_forro",
@@ -403,6 +403,14 @@ export const SERVICOS: Servico[] = [
     match: /chapisco/,
   }),
   S({
+    chave: "lixamento_parede",
+    cap: 5,
+    desc: "Lixamento/apicoamento da pintura e chapisco (aderência do revestimento)",
+    un: "m²",
+    tipo: "composicao",
+    match: /lixamento|apicoamento/,
+  }),
+  S({
     chave: "emboco",
     cap: 5,
     desc: "Emboço / reboco",
@@ -505,6 +513,16 @@ export const SERVICOS: Servico[] = [
     match: /chumbador/,
   }),
   // 6 Hidrossanitárias / 23 Pluviais
+  S({
+    chave: "adequacao_ralo",
+    cap: 6,
+    desc: "Adequação do ralo: troca do corpo do ralo/caixa sifonada e ajuste ao novo nível do piso",
+    un: "un",
+    tipo: "composicao",
+    mo: 150,
+    qtd: 1,
+    match: /adequacao do ralo|caixa sifonada/,
+  }),
   S({
     chave: "ponto_agua_fria",
     cap: 6,
@@ -721,6 +739,15 @@ export const SERVICOS: Servico[] = [
     match: /revestimento de parede/,
   }),
   S({
+    chave: "perfil_revestimento",
+    cap: 9,
+    desc: "Acabamento do topo do revestimento (perfil/cantoneira)",
+    un: "m",
+    tipo: "cotacao",
+    perda: 10,
+    match: /acabamento do topo|perfil.*revestimento|cantoneira/,
+  }),
+  S({
     chave: "rodape",
     cap: 9,
     desc: "Rodapé",
@@ -845,7 +872,7 @@ export const SERVICOS: Servico[] = [
     tipo: "cotacao",
     mo: 50,
     qtd: 1,
-    match: /\bralo/,
+    match: /^(?!.*adequacao).*\bralo/,
   }),
   S({
     chave: "sifao",
