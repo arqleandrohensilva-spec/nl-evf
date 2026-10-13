@@ -1,12 +1,9 @@
-import { createFileRoute, redirect, Outlet, Link } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { createFileRoute, Outlet, Link } from "@tanstack/react-router";
 
+// Sem login por decisão do escritório: o acesso será controlado pelo NL HUB.
+// O banco libera leitura e escrita para o papel "anon" (políticas "anon all <tabela>").
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) throw redirect({ to: "/auth" });
-  },
   component: Layout,
 });
 
@@ -49,15 +46,6 @@ function Layout() {
             Configurações
           </Link>
         </nav>
-        <button
-          className="mt-6 px-3 text-xs text-muted-foreground underline"
-          onClick={async () => {
-            await supabase.auth.signOut();
-            window.location.replace("/auth");
-          }}
-        >
-          Sair
-        </button>
       </aside>
       <main className="min-w-0 flex-1 p-4 md:p-8">
         <Outlet />
