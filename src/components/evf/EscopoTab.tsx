@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { ETAPA_OPTIONS, LinkCell, NumCell, SelectCell, TextCell, TIPO_OPTIONS } from "./cells";
 import { EXEMPLO_AMBIENTE, EXEMPLO_OBRA, PropostasDialog } from "./OQueSeraFeito";
 import { SugestoesPainel } from "./SugestoesPainel";
+import { ehObraNova, ObraNova } from "./ObraNova";
 import type { EvfData } from "./useEvfData";
 
 function proximoCodigo(itens: Item[], cap: number) {
@@ -110,9 +111,14 @@ export function EscopoTab({ d }: { d: EvfData }) {
             {semPreco} sem preço — o total ainda vai subir
           </span>
         ) : null}
+        {!filtro && ehObraNova(evf.tipo_obra) && itens.length ? (
+          <span className="ml-auto">
+            <ObraNova d={d} />
+          </span>
+        ) : null}
         {!filtro ? (
           <form
-            className="ml-auto flex items-center gap-2"
+            className={`${ehObraNova(evf.tipo_obra) && itens.length ? "" : "ml-auto "}flex items-center gap-2`}
             onSubmit={(e) => {
               e.preventDefault();
               if (!novoAmb.trim()) return;
@@ -162,6 +168,8 @@ export function EscopoTab({ d }: { d: EvfData }) {
           </Button>
         </div>
       ) : null}
+
+      {ehObraNova(evf.tipo_obra) && !d.todosItens.length ? <ObraNova d={d} destaque /> : null}
 
       {blocos.map((amb) => (
         <Bloco

@@ -13,8 +13,8 @@ import {
   type Item,
 } from "@/lib/calc";
 import { run } from "@/lib/data";
-import type { TablesInsert } from "@/integrations/supabase/types";
-import { PACOTES_INICIAIS } from "@/lib/biblioteca";
+import type { Json, TablesInsert } from "@/integrations/supabase/types";
+import { PACOTES_INICIAIS, SERVICO } from "@/lib/biblioteca";
 import { linhasDoModelo, normaliza } from "@/lib/sugestoes";
 
 /** Copia o EVF inteiro (ambientes, medições, itens e cotações) como uma nova revisão. Retorna o id novo. */
@@ -345,7 +345,7 @@ export async function exportarXlsx(
   XLSX.writeFile(wb, nome);
 }
 
-type LinhaNova = Omit<TablesInsert<"itens_evf">, "evf_id" | "codigo" | "ordem">;
+export type LinhaNova = Omit<TablesInsert<"itens_evf">, "evf_id" | "codigo" | "ordem">;
 
 /** Insere itens novos numerando o código dentro de cada capítulo (ex.: 5.3, 5.4…). */
 export async function inserirItens(evfId: string, linhas: LinhaNova[], existentes: Item[]) {
@@ -398,4 +398,78 @@ export async function aplicarPacote(evfId: string, pacoteId: string) {
   }
   if (pacote.geral) linhas.push(...linhasDoModelo(pacote.geral, null, [], preco));
   await inserirItens(evfId, linhas, []);
+}
+
+/**
+ * Construção do zero: cria os ambientes (com portas e janelas) e todos os serviços estimados.
+ * Os itens entram com o preço do catálogo quando existir; os demais ficam para cotar.
+ */
+export async function gerarObraNova(
+  evfId: string,
+  obra: import("@/lib/obraNova").ObraEstimada,
+  programa: import("@/lib/obraNova").Programa,
+  existentes: Item[],
+  ordemAmbientes: number,
+) {
+  const catalogo = await run(
+    supabase.from("catalogo_servicos").select("descricao, material_unit, mo_unit"),
+  );
+  const preco = buscadorDePreco(catalogo);
+  const comPreco = (l: LinhaNova): LinhaNova => {
+    const desc = l.descricao ?? "";
+    const p = preco(desc) ?? (l.chave ? preco(SERVICO_DESC(l.chave)) : null);
+    return p ? { ...l, material_unit: p.material_unit, mo_unit: p.mo_unit || (l.mo_unit ?? 0) } : l;
+  };
+  const linhas: LinhaNova[] = obra.gerais.map(comPreco);
+  for (const [k, a] of obra.ambientes.entries()) {
+    const [amb] = await run(
+      supabase
+        .from("ambientes")
+        .insert({
+          evf_id: evfId,
+          nome: a.nome,
+          ordem: ordemAmbientes + k + 1,
+          comprimento: a.comprimento,
+          largura: a.largura,
+          pe_direito: a.pe_direito,
+        })
+        .select(),
+    );
+    if (!amb) continue;
+    if (a.vaos.length)
+      await run(
+        supabase
+          .from("medicoes")
+          .insert(
+            a.vaos.map((v, i) => ({
+              ambiente_id: amb.id,
+              descricao: v.descricao,
+              largura: v.largura,
+              altura: v.altura,
+              quantidade: 1,
+              sinal: -1,
+              tipo: "vao",
+              ordem: i + 1,
+            })),
+          )
+          .select(),
+      );
+    for (const l of a.linhas) linhas.push(comPreco({ ...l, ambiente_id: amb.id }));
+  }
+  await inserirItens(evfId, linhas, existentes);
+  await run(
+    supabase
+      .from("evfs")
+      .update({
+        programa: programa as unknown as Json,
+        area_m2: obra.numeros.areaConstruida,
+      })
+      .eq("id", evfId)
+      .select(),
+  );
+  return linhas.length;
+}
+
+function SERVICO_DESC(chave: string) {
+  return SERVICO[chave]?.desc ?? chave;
 }

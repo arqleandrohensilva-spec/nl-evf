@@ -49,7 +49,9 @@ export function Caminho({
       titulo: "Ambientes e medidas",
       feito: ambientes.length > 0 && comMedidas.length === ambientes.length,
       status: !ambientes.length
-        ? "Crie os ambientes da obra"
+        ? /constru|ampliac/i.test(evf.tipo_obra)
+          ? "Preencha os dados da casa"
+          : "Crie os ambientes da obra"
         : comMedidas.length < ambientes.length
           ? `Faltam medidas em ${ambientes.length - comMedidas.length} de ${ambientes.length}`
           : `${ambientes.length} ${ambientes.length === 1 ? "ambiente medido" : "ambientes medidos"}`,

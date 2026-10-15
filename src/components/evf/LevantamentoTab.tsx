@@ -6,6 +6,7 @@ import { fmtM2, fmtN } from "@/lib/format";
 import { geometria } from "@/lib/sugestoes";
 import { NumCell, SelectCell, TextCell } from "./cells";
 import type { EvfData } from "./useEvfData";
+import { ehObraNova, ObraNova } from "./ObraNova";
 
 const TIPOS = [
   { value: "soma", label: "+ trecho (soma)" },
@@ -307,9 +308,13 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
         );
       })}
       {!ambientes.length ? (
-        <div className="card p-8 text-center text-muted-foreground">
-          Nenhum ambiente. Adicione o primeiro acima.
-        </div>
+        ehObraNova(evf.tipo_obra) ? (
+          <ObraNova d={d} destaque />
+        ) : (
+          <div className="card p-8 text-center text-muted-foreground">
+            Nenhum ambiente. Adicione o primeiro acima.
+          </div>
+        )
       ) : null}
     </div>
   );

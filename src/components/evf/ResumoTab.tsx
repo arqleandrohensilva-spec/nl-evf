@@ -74,6 +74,16 @@ export function ResumoTab({ d }: { d: EvfData }) {
         />
       </div>
 
+      {!nomeFiltro && Number(evf.area_m2) > 0 ? (
+        <CustoPorM2
+          total={res.geral}
+          area={Number(evf.area_m2)}
+          cub={Number(config?.cub_valor) || 0}
+          cubRef={config?.cub_ref ?? ""}
+          semPreco={itens.filter((i) => Number(i.material_unit) + Number(i.mo_unit) === 0).length}
+        />
+      ) : null}
+
       <section className="card space-y-3 p-5" aria-label="Total contra o target">
         <div className="flex flex-wrap justify-between gap-2">
           <h2 className="font-semibold">Total × target</h2>
@@ -287,5 +297,56 @@ function Legenda({ cor, t }: { cor: string; t: string }) {
       <span className={`inline-block h-3 w-3 rounded-sm ${cor}`} />
       {t}
     </span>
+  );
+}
+
+/** Custo por m² do EVF comparado ao CUB: um teste de sanidade, não um orçamento. */
+function CustoPorM2({
+  total,
+  area,
+  cub,
+  cubRef,
+  semPreco,
+}: {
+  total: number;
+  area: number;
+  cub: number;
+  cubRef: string;
+  semPreco: number;
+}) {
+  const m2 = total / area;
+  const rel = cub ? (m2 / cub - 1) * 100 : 0;
+  return (
+    <section
+      className="card flex flex-wrap items-center gap-x-8 gap-y-2 p-5"
+      aria-label="Custo por m²"
+    >
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Custo por m²
+        </div>
+        <div className="num text-2xl font-semibold">{fmtR(m2)}</div>
+        <div className="text-xs text-muted-foreground">
+          {fmtR(total)} ÷ {area.toLocaleString("pt-BR")} m²
+        </div>
+      </div>
+      {cub ? (
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            CUB {cubRef}
+          </div>
+          <div className="num text-2xl font-semibold text-muted-foreground">{fmtR(cub)}</div>
+          <div className="text-xs text-muted-foreground">
+            EVF {rel >= 0 ? "+" : "−"}
+            {fmtPct(Math.abs(rel), 0)} em relação ao CUB
+          </div>
+        </div>
+      ) : null}
+      <p className="min-w-[16rem] flex-1 text-sm text-muted-foreground">
+        {semPreco
+          ? `${semPreco} serviços ainda sem preço: o custo por m² vai subir até as cotações entrarem.`
+          : "O CUB não inclui projetos, taxas, fundações especiais, muro, paisagismo nem equipamentos; um EVF completo costuma ficar acima dele."}
+      </p>
+    </section>
   );
 }

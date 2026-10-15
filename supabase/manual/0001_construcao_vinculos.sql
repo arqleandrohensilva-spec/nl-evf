@@ -28,3 +28,6 @@ alter table public.medicoes add column if not exists profundidade numeric not nu
 -- "O que será feito" por ambiente e na obra toda (2026-10-13)
 alter table public.ambientes add column if not exists descricao_servico text;
 alter table public.evfs add column if not exists descricao_obra text;
+
+-- Dados da construção do zero (programa da casa) (2026-10-15)
+alter table public.evfs add column if not exists programa jsonb;

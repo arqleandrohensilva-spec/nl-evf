@@ -19,6 +19,7 @@ const evf = (tipo: string): Evf => ({
   created_at: "",
   sugestoes_ignoradas: [],
   descricao_obra: null,
+  programa: null,
 });
 
 const amb = (id: string, nome: string, c = 0, l = 0, pd = 2.6, vaos = 0): Ambiente => ({

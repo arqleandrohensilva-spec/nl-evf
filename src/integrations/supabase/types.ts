@@ -191,6 +191,7 @@ export type Database = {
       }
       evfs: {
         Row: {
+          programa: Json | null
           descricao_obra: string | null
           sugestoes_ignoradas: Json
           area_m2: number
@@ -209,6 +210,7 @@ export type Database = {
           tipo_obra: string
         }
         Insert: {
+          programa?: Json | null
           descricao_obra?: string | null
           sugestoes_ignoradas?: Json
           area_m2?: number
@@ -227,6 +229,7 @@ export type Database = {
           tipo_obra?: string
         }
         Update: {
+          programa?: Json | null
           descricao_obra?: string | null
           sugestoes_ignoradas?: Json
           area_m2?: number
