@@ -39,6 +39,7 @@ function Page() {
     [evf, itens, caps, cotacoes, d.ambientes],
   );
   const [aba, setAba] = useState("escopo");
+  const [foco, setFoco] = useState<string | null>(null);
   const comecou = useRef(false);
   useEffect(() => {
     if (comecou.current || d.carregando || !evf) return;
@@ -248,7 +249,7 @@ function Page() {
             ["levantamento", "1 · Ambientes e medidas"],
             ["escopo", "2 · Escopo"],
             ["materiais", "Materiais"],
-            ["cotacoes", "3 · Cotações"],
+            ["cotacoes", "3 · Preços e cotações"],
             ["resumo", "4 · Resumo"],
             ["abc", "Curva ABC"],
             ["auditor", `Auditor${nAlertas ? ` (${nAlertas})` : ""}`],
@@ -295,13 +296,19 @@ function Page() {
           </div>
         ) : null}
         <TabsContent value="escopo" className="mt-4">
-          <EscopoTab d={dv} />
+          <EscopoTab
+            d={dv}
+            onPreco={(id) => {
+              setFoco(id);
+              setAba("cotacoes");
+            }}
+          />
         </TabsContent>
         <TabsContent value="materiais" className="mt-4">
           <MateriaisTab d={dv} />
         </TabsContent>
         <TabsContent value="cotacoes" className="mt-4">
-          <CotacoesTab d={dv} />
+          <CotacoesTab d={dv} foco={foco} />
         </TabsContent>
         <TabsContent value="resumo" className="mt-4">
           <ResumoTab d={dv} />

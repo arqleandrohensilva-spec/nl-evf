@@ -25,9 +25,8 @@ import {
   normaliza,
   quantidadeVinculada,
 } from "@/lib/sugestoes";
-import { atualizarPrecos, inserirItens } from "@/lib/actions";
-import { usePrecificador, useReferencia } from "@/lib/precos";
-import { dividir } from "@/lib/referencia";
+import { inserirItens } from "@/lib/actions";
+import { usePrecificador } from "@/lib/precos";
 import { compra, consumoDoItem, INSUMOS } from "@/lib/insumos";
 import { agruparPorFase } from "@/lib/fases";
 import { interpretar, type Interpretacao } from "@/lib/interpretar";
@@ -54,14 +53,20 @@ type Catalogo = NonNullable<ReturnType<typeof useCatalogo>["data"]>;
  * Escopo por ambiente: um bloco por local (Obra toda + cada ambiente), itens na ordem da obra.
  * Lançar é sempre dentro do bloco: "O que será feito" (texto → serviços) ou "+ Serviço".
  */
-export function EscopoTab({ d }: { d: EvfData }) {
+export function EscopoTab({
+  d,
+  onPreco,
+}: {
+  d: EvfData;
+  /** Abre a aba de preços (no item, se houver). */
+  onPreco?: (id: string | null) => void;
+}) {
   const { evf, itens, filtro, caps, mItem, ambientes, mAmb } = d;
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [detalhe, setDetalhe] = useState<string | null>(null);
   const [novoAmb, setNovoAmb] = useState("");
   useEffect(() => setSel(new Set()), [filtro]);
   const res = useMemo(() => resumo(itens, caps), [itens, caps]);
-  const referencia = useReferencia().data;
   if (!evf) return null;
 
   const ids = new Set(ambientes.map((a) => a.id));
@@ -75,19 +80,6 @@ export function EscopoTab({ d }: { d: EvfData }) {
       amb ? i.ambiente_id === amb.id : !i.ambiente_id || !ids.has(i.ambiente_id),
     );
   const semPreco = itens.filter((i) => itemTotais(i).total === 0).length;
-  const preenchiveis = itens.filter(
-    (i) => Number(i.material_unit) + Number(i.mo_unit) === 0 && i.chave && referencia?.has(i.chave),
-  );
-  async function preencherReferencia() {
-    await atualizarPrecos(
-      preenchiveis.map((i) => {
-        const r = referencia!.get(i.chave!)!;
-        return { id: i.id, ...dividir(r.preco, r.pct_mo), origem_preco: `${r.base} · ${r.codigo}` };
-      }),
-    );
-    await mItem.invalidar();
-    toast.success(`${preenchiveis.length} itens com preço de referência.`);
-  }
   const selecionados = itens.filter((i) => sel.has(i.id));
   const alternar = (lista: string[], marcar: boolean) =>
     setSel((s) => {
@@ -124,14 +116,12 @@ export function EscopoTab({ d }: { d: EvfData }) {
           <span className="text-muted-foreground"> com taxas · {itens.length} itens</span>
         </span>
         {semPreco ? (
-          <span className="rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning">
-            {semPreco} sem preço — o total ainda vai subir
-          </span>
-        ) : null}
-        {preenchiveis.length ? (
-          <Button variant="outline" className="h-9" onClick={preencherReferencia}>
-            <Sparkles className="size-4" /> Preencher {preenchiveis.length} com a referência
-          </Button>
+          <button
+            className="rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning hover:underline"
+            onClick={() => onPreco?.(null)}
+          >
+            {semPreco} sem preço — lançar em Preços e cotações
+          </button>
         ) : null}
         {!filtro && ehObraNova(evf.tipo_obra) && itens.length ? (
           <span className="ml-auto">
@@ -202,10 +192,11 @@ export function EscopoTab({ d }: { d: EvfData }) {
           sel={sel}
           alternar={alternar}
           abrir={setDetalhe}
+          onPreco={onPreco}
         />
       ))}
 
-      <ItemDetalhe d={d} item={itemAberto} onClose={() => setDetalhe(null)} />
+      <ItemDetalhe d={d} item={itemAberto} onClose={() => setDetalhe(null)} onPreco={onPreco} />
     </div>
   );
 }
@@ -217,7 +208,9 @@ function Bloco({
   sel,
   alternar,
   abrir,
+  onPreco,
 }: {
+  onPreco?: ((id: string | null) => void) | undefined;
   d: EvfData;
   amb: Ambiente | null;
   itens: Item[];
@@ -357,12 +350,6 @@ function Bloco({
                     <th>Serviço</th>
                     <th className="w-28 text-right">Qtd</th>
                     <th className="w-14">Un</th>
-                    <th
-                      className="w-32 text-right"
-                      title="Material + mão de obra, por unidade do item"
-                    >
-                      R$ por unidade
-                    </th>
                     <th className="w-32 text-right">Total</th>
                     <th className="w-28" />
                     <th className="w-20" />
@@ -371,6 +358,7 @@ function Bloco({
                 <tbody>
                   {grupos.map(({ fase, itens: its }) => (
                     <FaseLinhas
+                      onPreco={onPreco}
                       key={fase.id}
                       nome={fase.nome}
                       itens={its}
@@ -386,7 +374,7 @@ function Bloco({
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={5} className="py-2 text-sm text-muted-foreground">
+                    <td colSpan={4} className="py-2 text-sm text-muted-foreground">
                       Custo direto {fmtR(r.direto)} · Taxas de administração {fmtR(r.taxas)}
                     </td>
                     <td className="num text-right font-semibold">{fmtR(r.geral)}</td>
@@ -423,6 +411,7 @@ function Bloco({
 }
 
 function FaseLinhas({
+  onPreco,
   nome,
   itens,
   d,
@@ -438,6 +427,7 @@ function FaseLinhas({
   alternar: (ids: string[], marcar: boolean) => void;
   abrir: (id: string) => void;
   nCot: (id: string) => number;
+  onPreco?: ((id: string | null) => void) | undefined;
 }) {
   const { mItem, todosItens, ambientes, medicoes } = d;
   const subtotal = itens.reduce((s, i) => s + itemTotais(i).total, 0);
@@ -446,7 +436,7 @@ function FaseLinhas({
     <>
       <tr className="bg-muted/50">
         <td />
-        <td colSpan={4} className="py-1.5 text-xs font-semibold uppercase tracking-wide">
+        <td colSpan={3} className="py-1.5 text-xs font-semibold uppercase tracking-wide">
           {nome}
         </td>
         <td className="num text-right text-xs font-semibold">{fmtR(subtotal)}</td>
@@ -464,7 +454,9 @@ function FaseLinhas({
               ? { txt: `cotar (${cots}/3)`, alerta: true }
               : i.etapa === "Etapa futura"
                 ? { txt: "etapa futura", alerta: false }
-                : i.origem_preco && i.origem_preco !== "Catálogo do escritório"
+                : i.origem_preco &&
+                    i.origem_preco !== "Catálogo do escritório" &&
+                    i.origem_preco !== "Cotação"
                   ? { txt: `ref. ${i.origem_preco.split(" ")[0]}`, alerta: false }
                   : null;
         return (
@@ -511,23 +503,15 @@ function FaseLinhas({
               )}
             </td>
             <td className="text-sm">{i.unidade}</td>
-            <td className="text-right text-sm">
+            <td className="text-right">
               <button
-                className="num w-full rounded px-1 text-right hover:bg-muted"
-                title={`Material ${fmtR(Number(i.material_unit))} + M.O. ${fmtR(Number(i.mo_unit))} por ${i.unidade}. Clique para editar.`}
-                onClick={() => abrir(i.id)}
+                className="num w-full rounded px-1 text-right font-semibold hover:bg-muted hover:text-primary"
+                title={`Material ${fmtR(Number(i.material_unit))} + M.O. ${fmtR(Number(i.mo_unit))} por ${i.unidade}. Clique para ver o preço.`}
+                onClick={() => (onPreco ? onPreco(i.id) : abrir(i.id))}
               >
-                {unit ? (
-                  <>
-                    {fmtN(unit)}
-                    <span className="text-[11px] text-muted-foreground">/{i.unidade}</span>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground">definir</span>
-                )}
+                {fmtR(t.total)}
               </button>
             </td>
-            <td className="num text-right font-semibold">{fmtR(t.total)}</td>
             <td>
               {situacao ? (
                 <span
@@ -591,7 +575,17 @@ function Campo({
 }
 
 /** Painel lateral com tudo do item: preço separado, vínculo, perda, tipo, etapa, capítulo. */
-function ItemDetalhe({ d, item, onClose }: { d: EvfData; item: Item | null; onClose: () => void }) {
+function ItemDetalhe({
+  d,
+  item,
+  onClose,
+  onPreco,
+}: {
+  d: EvfData;
+  item: Item | null;
+  onClose: () => void;
+  onPreco?: ((id: string | null) => void) | undefined;
+}) {
   const { mItem, caps, ambientes, todosItens, medicoes } = d;
   if (!item) return null;
   const i = item;
@@ -715,44 +709,23 @@ function ItemDetalhe({ d, item, onClose }: { d: EvfData; item: Item | null; onCl
               <NumCell value={Number(i.fator)} label="Fator" onSave={(v) => upd({ fator: v })} />
             </Campo>
           ) : null}
-          <p className="rounded-md bg-primary-soft/60 px-3 py-2 text-xs">
-            Os valores são sempre <b>por {i.unidade}</b>. Total = quantidade × (material + mão de
-            obra).{" "}
-            {i.tipo_preco === "cotacao"
-              ? "Este item é cotado: lance o preço do fornecedor na aba Cotações; aqui fica só a mão de obra."
-              : "Este item não é cotado: digite aqui o material e a mão de obra."}
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <Campo
-              rotulo={`Material (R$ por ${i.unidade})`}
-              dica={
-                i.tipo_preco === "cotacao"
-                  ? "Vem da aba Cotações: o valor considerado das 3 cotações."
-                  : `Preço do material de 1 ${i.unidade}.`
-              }
-            >
-              {i.tipo_preco === "cotacao" ? (
-                <span className="num block px-2 py-2 text-right">
-                  {fmtN(Number(i.material_unit))}
-                </span>
-              ) : (
-                <NumCell
-                  value={Number(i.material_unit)}
-                  label="Material unitário"
-                  onSave={(v) => upd({ material_unit: v })}
-                />
-              )}
-            </Campo>
-            <Campo
-              rotulo={`Mão de obra (R$ por ${i.unidade})`}
-              dica={`M.O. para executar 1 ${i.unidade}.`}
-            >
-              <NumCell
-                value={Number(i.mo_unit)}
-                label="Mão de obra unitária"
-                onSave={(v) => upd({ mo_unit: v })}
-              />
-            </Campo>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-primary-soft/60 px-3 py-2 text-sm">
+            <span>
+              Material <span className="num">{fmtR(Number(i.material_unit))}</span> + M.O.{" "}
+              <span className="num">{fmtR(Number(i.mo_unit))}</span> por {i.unidade}
+            </span>
+            {onPreco ? (
+              <Button
+                variant="outline"
+                className="h-8 px-2 text-xs"
+                onClick={() => {
+                  onClose();
+                  onPreco(i.id);
+                }}
+              >
+                Editar preço
+              </Button>
+            ) : null}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Campo rotulo="Como se orça">

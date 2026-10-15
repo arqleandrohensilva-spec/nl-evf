@@ -1,6 +1,13 @@
-import { Plus, Trash2 } from "lucide-react";
-import { sortItens, valorCotacao, type Cotacao, type Item } from "@/lib/calc";
+import { useEffect, useMemo, useState } from "react";
+import { Plus, Sparkles, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { itemTotais, sortItens, valorCotacao, type Cotacao, type Item } from "@/lib/calc";
+import { atualizarPrecos } from "@/lib/actions";
+import { agruparPorFase } from "@/lib/fases";
 import { fmtR } from "@/lib/format";
+import { useReferencia } from "@/lib/precos";
+import { dividir } from "@/lib/referencia";
 import { cn } from "@/lib/utils";
 import { LinkCell, NumCell, TextCell } from "./cells";
 import type { EvfData } from "./useEvfData";
@@ -11,66 +18,120 @@ const CRITERIOS = [
   { v: "maior", l: "Maior" },
 ];
 
-export function CotacoesTab({ d }: { d: EvfData }) {
-  const { itens, cotacoes, mItem, mCot } = d;
-  const lista = sortItens(itens).filter((i) => i.tipo_preco === "cotacao");
-  const com3 = lista.filter(
-    (i) => cotacoes.filter((c) => c.item_id === i.id && Number(c.valor) > 0).length >= 3,
-  ).length;
+const semPreco = (i: Item) => Number(i.material_unit) + Number(i.mo_unit) === 0;
 
-  /** Recalcula o valor considerado e grava no material_unit do item. */
+/**
+ * Preços e cotações: o único lugar onde se lançam valores.
+ * - Comprados de fornecedor (tipo cotação): 3 cotações → material; a mão de obra ao lado.
+ * - Serviços (composição e verba): material e mão de obra por unidade do item.
+ */
+export function CotacoesTab({ d, foco }: { d: EvfData; foco?: string | null }) {
+  const { itens, cotacoes, mItem, mCot, ambientes } = d;
+  const [soFalta, setSoFalta] = useState(false);
+  const referencia = useReferencia().data;
+  const todos = useMemo(() => sortItens(itens), [itens]);
+  const n3 = (i: Item) => cotacoes.filter((c) => c.item_id === i.id && Number(c.valor) > 0).length;
+  const falta = (i: Item) => semPreco(i) || (i.tipo_preco === "cotacao" && n3(i) < 3);
+  const cotados = todos.filter((i) => i.tipo_preco === "cotacao" && (!soFalta || falta(i)));
+  const servicos = todos.filter((i) => i.tipo_preco !== "cotacao" && (!soFalta || falta(i)));
+  const nSemPreco = todos.filter(semPreco).length;
+  const com3 = todos.filter((i) => i.tipo_preco === "cotacao" && n3(i) >= 3).length;
+  const nCotados = todos.filter((i) => i.tipo_preco === "cotacao").length;
+  const nomeAmb = (id: string | null) => ambientes.find((a) => a.id === id)?.nome ?? "Obra toda";
+  const preenchiveis = todos.filter((i) => semPreco(i) && i.chave && referencia?.has(i.chave));
+
+  useEffect(() => {
+    if (!foco) return;
+    const t = setTimeout(() => {
+      const el = document.getElementById(`preco-${foco}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      el?.classList.add("ring-2", "ring-primary");
+      setTimeout(() => el?.classList.remove("ring-2", "ring-primary"), 2500);
+    }, 150);
+    return () => clearTimeout(t);
+  }, [foco]);
+
+  /** Recalcula o valor considerado e grava no material do item. */
   function sincronizar(item: Item, cots: Cotacao[], criterio = item.criterio_cotacao) {
     const v = valorCotacao(
       cots.map((c) => Number(c.valor)),
       criterio,
     );
     const patch: Record<string, unknown> = { criterio_cotacao: criterio };
-    if (v != null) patch["material_unit"] = v;
+    if (v != null) {
+      patch["material_unit"] = v;
+      patch["origem_preco"] = "Cotação";
+    }
     mItem.update.mutate({ id: item.id, ...patch });
+  }
+
+  async function preencherReferencia() {
+    await atualizarPrecos(
+      preenchiveis.map((i) => {
+        const r = referencia!.get(i.chave!)!;
+        return { id: i.id, ...dividir(r.preco, r.pct_mo), origem_preco: `${r.base} · ${r.codigo}` };
+      }),
+    );
+    await mItem.invalidar();
+    toast.success(`${preenchiveis.length} itens com preço de referência.`);
   }
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="card px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Itens por cotação
-          </div>
-          <div className="num text-2xl font-semibold">{lista.length}</div>
-        </div>
-        <div className="card px-4 py-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Com 3 cotações
-          </div>
-          <div className="num text-2xl font-semibold">{com3}</div>
-        </div>
-        <div
-          className={cn(
-            "card px-4 py-3",
-            lista.length - com3 > 0 && "border-warning/40 bg-warning-soft",
-          )}
-        >
-          <div className="text-xs font-semibold uppercase tracking-wide text-warning">
-            Faltam cotações
-          </div>
-          <div className="num text-2xl font-semibold text-warning">{lista.length - com3}</div>
-        </div>
+        <Kpi titulo="Itens com preço" valor={`${todos.length - nSemPreco} de ${todos.length}`} />
+        <Kpi
+          titulo="Cotados com 3 cotações"
+          valor={`${com3} de ${nCotados}`}
+          alerta={com3 < nCotados}
+        />
+        <Kpi titulo="Sem preço" valor={String(nSemPreco)} alerta={nSemPreco > 0} />
       </div>
-      <p className="text-sm text-muted-foreground">
-        Aqui entra o <b>preço do material por unidade do item</b> (R$ por m², por un…), como o
-        fornecedor passa. O valor considerado (média de 3, ou menor/maior com justificativa) vira o
-        material do item no Escopo; a mão de obra fica no item. Cole o link da página do produto;
-        preço da internet é referência, não cotação formal: anote a data.
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="min-w-[18rem] flex-1 text-sm text-muted-foreground">
+          Todos os valores são <b>por unidade do item</b> (R$ por m², por un…); o total é quantidade
+          × (material + mão de obra). Itens comprados de fornecedor levam 3 cotações; serviços levam
+          material e mão de obra direto.
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="size-4 accent-primary"
+            checked={soFalta}
+            onChange={(e) => setSoFalta(e.target.checked)}
+          />
+          Só o que falta
+        </label>
+        {preenchiveis.length ? (
+          <Button variant="outline" className="h-9" onClick={preencherReferencia}>
+            <Sparkles className="size-4" /> Preencher {preenchiveis.length} com a referência
+          </Button>
+        ) : null}
+      </div>
+
+      <h2 className="pt-2 text-base font-semibold">
+        Comprados de fornecedor{" "}
+        <span className="font-normal text-muted-foreground">({cotados.length})</span>
+      </h2>
+      <p className="-mt-2 text-sm text-muted-foreground">
+        Lance o preço do fornecedor por unidade. O valor considerado (média de 3, ou menor/maior com
+        justificativa) vira o material do item. Cole o link do produto; preço da internet é
+        referência, não cotação formal.
       </p>
       <div className="space-y-3">
-        {lista.map((i) => {
+        {cotados.map((i) => {
           const cs = cotacoes.filter((c) => c.item_id === i.id).sort((a, b) => a.ordem - b.ordem);
           const vals = cs.map((c) => Number(c.valor)).filter((v) => v > 0);
           const spread = vals.length > 1 ? (Math.max(...vals) / Math.min(...vals) - 1) * 100 : 0;
           return (
-            <section key={i.id} className="card p-4" aria-label={`Cotações de ${i.descricao}`}>
+            <section
+              key={i.id}
+              id={`preco-${i.id}`}
+              className="card p-4 transition-shadow"
+              aria-label={`Cotações de ${i.descricao}`}
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2 font-semibold">
                     <span>
                       <span className="num mr-2 text-muted-foreground">{i.codigo}</span>
@@ -83,6 +144,10 @@ export function CotacoesTab({ d }: { d: EvfData }) {
                     />
                   </div>
                   <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                    <span className="rounded bg-muted px-2 py-0.5 text-muted-foreground">
+                      {nomeAmb(i.ambiente_id)} · {Number(i.quantidade).toLocaleString("pt-BR")}{" "}
+                      {i.unidade}
+                    </span>
                     {vals.length < 3 ? (
                       <span className="rounded bg-warning-soft px-2 py-0.5 font-medium text-warning">
                         Só {vals.length} cotação{vals.length === 1 ? "" : "ões"}
@@ -99,7 +164,7 @@ export function CotacoesTab({ d }: { d: EvfData }) {
                     ) : null}
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-end gap-3">
                   <div
                     role="group"
                     aria-label="Critério"
@@ -123,8 +188,25 @@ export function CotacoesTab({ d }: { d: EvfData }) {
                     ))}
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-muted-foreground">Considerado</div>
-                    <div className="num font-semibold">{fmtR(Number(i.material_unit))}</div>
+                    <div className="text-xs text-muted-foreground">Material (R$/{i.unidade})</div>
+                    <div className="num h-9 font-semibold leading-9">
+                      {fmtR(Number(i.material_unit))}
+                    </div>
+                  </div>
+                  <label className="text-right text-xs text-muted-foreground">
+                    Mão de obra (R$/{i.unidade})
+                    <NumCell
+                      value={Number(i.mo_unit)}
+                      label={`Mão de obra de ${i.descricao}`}
+                      className="w-28 border-border"
+                      onSave={(v) => mItem.update.mutate({ id: i.id, mo_unit: v })}
+                    />
+                  </label>
+                  <div className="text-right">
+                    <div className="text-xs text-muted-foreground">Total</div>
+                    <div className="num h-9 font-semibold leading-9">
+                      {fmtR(itemTotais(i).total)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -199,22 +281,30 @@ export function CotacoesTab({ d }: { d: EvfData }) {
                   ))}
                 </tbody>
               </table>
-              {cs.length < 3 ? (
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                {cs.length < 3 ? (
+                  <button
+                    className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-sm font-medium text-primary hover:bg-primary-soft"
+                    onClick={() =>
+                      mCot.insert.mutate({
+                        item_id: i.id,
+                        fornecedor_nome: "",
+                        valor: 0,
+                        ordem: cs.length + 1,
+                        data: new Date().toISOString().slice(0, 10),
+                      })
+                    }
+                  >
+                    <Plus className="size-4" /> Adicionar cotação
+                  </button>
+                ) : null}
                 <button
-                  className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-sm font-medium text-primary hover:bg-primary-soft"
-                  onClick={() =>
-                    mCot.insert.mutate({
-                      item_id: i.id,
-                      fornecedor_nome: "",
-                      valor: 0,
-                      ordem: cs.length + 1,
-                      data: new Date().toISOString().slice(0, 10),
-                    })
-                  }
+                  className="ml-auto text-xs text-muted-foreground underline"
+                  onClick={() => mItem.update.mutate({ id: i.id, tipo_preco: "composicao" })}
                 >
-                  <Plus className="size-4" /> Adicionar cotação
+                  não é comprado de fornecedor? passar para serviços
                 </button>
-              ) : null}
+              </div>
               {i.criterio_cotacao !== "media" ? (
                 <div className="mt-2">
                   <TextCell
@@ -229,12 +319,151 @@ export function CotacoesTab({ d }: { d: EvfData }) {
             </section>
           );
         })}
-        {!lista.length ? (
-          <div className="card p-8 text-center text-muted-foreground">
-            Nenhum item do tipo “Cotação”. Mude o tipo do item na aba Escopo.
+        {!cotados.length ? (
+          <div className="card p-6 text-center text-sm text-muted-foreground">
+            {soFalta ? "Nada faltando aqui." : "Nenhum item comprado de fornecedor."}
           </div>
         ) : null}
       </div>
+
+      <h2 className="pt-4 text-base font-semibold">
+        Serviços <span className="font-normal text-muted-foreground">({servicos.length})</span>
+      </h2>
+      <p className="-mt-2 text-sm text-muted-foreground">
+        Composição e verba: digite o material e a mão de obra por unidade, ou preencha pela
+        referência (SINAPI) ou pelo catálogo do escritório.
+      </p>
+      {servicos.length ? (
+        <div className="card overflow-x-auto">
+          <table className="tbl min-w-[900px]">
+            <thead>
+              <tr>
+                <th>Serviço</th>
+                <th className="w-40">Local</th>
+                <th className="w-28 text-right">Quant.</th>
+                <th className="w-32 text-right">Material (R$/un)</th>
+                <th className="w-32 text-right">M.O. (R$/un)</th>
+                <th className="w-32 text-right">Total</th>
+                <th className="w-28" />
+              </tr>
+            </thead>
+            <tbody>
+              {agruparPorFase(servicos).map(({ fase, itens: its }) => (
+                <FaseServicos key={fase.id} nome={fase.nome} itens={its} d={d} nomeAmb={nomeAmb} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="card p-6 text-center text-sm text-muted-foreground">
+          {soFalta ? "Nada faltando aqui." : "Nenhum serviço."}
+        </div>
+      )}
     </div>
+  );
+}
+
+function Kpi({
+  titulo,
+  valor,
+  alerta = false,
+}: {
+  titulo: string;
+  valor: string;
+  alerta?: boolean;
+}) {
+  return (
+    <div className={cn("card px-4 py-3", alerta && "border-warning/40 bg-warning-soft")}>
+      <div
+        className={cn(
+          "text-xs font-semibold uppercase tracking-wide",
+          alerta ? "text-warning" : "text-muted-foreground",
+        )}
+      >
+        {titulo}
+      </div>
+      <div className={cn("num text-2xl font-semibold", alerta && "text-warning")}>{valor}</div>
+    </div>
+  );
+}
+
+function FaseServicos({
+  nome,
+  itens,
+  d,
+  nomeAmb,
+}: {
+  nome: string;
+  itens: Item[];
+  d: EvfData;
+  nomeAmb: (id: string | null) => string;
+}) {
+  const { mItem } = d;
+  return (
+    <>
+      <tr className="bg-muted/50">
+        <td colSpan={7} className="py-1.5 text-xs font-semibold uppercase tracking-wide">
+          {nome}
+        </td>
+      </tr>
+      {itens.map((i) => {
+        const origem = i.origem_preco;
+        return (
+          <tr
+            key={i.id}
+            id={`preco-${i.id}`}
+            className={cn("transition-shadow", semPreco(i) && "bg-warning-soft/40")}
+          >
+            <td>
+              <span className="num mr-2 text-xs text-muted-foreground">{i.codigo}</span>
+              {i.descricao}
+              {origem ? (
+                <span
+                  className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground"
+                  title={origem}
+                >
+                  {origem.startsWith("Catálogo")
+                    ? "catálogo"
+                    : origem === "Cotação"
+                      ? "cotação"
+                      : `ref. ${origem.split(" ")[0]}`}
+                </span>
+              ) : null}
+            </td>
+            <td className="text-sm text-muted-foreground">{nomeAmb(i.ambiente_id)}</td>
+            <td className="num text-right text-sm">
+              {Number(i.quantidade).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}{" "}
+              {i.unidade}
+            </td>
+            <td>
+              <NumCell
+                value={Number(i.material_unit)}
+                label={`Material de ${i.descricao}`}
+                onSave={(v) =>
+                  mItem.update.mutate({ id: i.id, material_unit: v, origem_preco: null })
+                }
+              />
+            </td>
+            <td>
+              <NumCell
+                value={Number(i.mo_unit)}
+                label={`Mão de obra de ${i.descricao}`}
+                onSave={(v) => mItem.update.mutate({ id: i.id, mo_unit: v })}
+              />
+            </td>
+            <td className="num text-right font-semibold">{fmtR(itemTotais(i).total)}</td>
+            <td className="text-right">
+              <button
+                className="whitespace-nowrap text-xs text-primary underline"
+                title="Passa a pedir 3 cotações de fornecedor (vai para “Comprados de fornecedor”)"
+                onClick={() => mItem.update.mutate({ id: i.id, tipo_preco: "cotacao" })}
+              >
+                pedir cotação
+              </button>
+            </td>
+          </tr>
+        );
+      })}
+    </>
   );
 }
