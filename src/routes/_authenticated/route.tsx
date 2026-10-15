@@ -36,6 +36,9 @@ function Layout() {
           <Link to="/base/catalogo" className={linkCls} activeProps={ativo}>
             Catálogo de serviços
           </Link>
+          <Link to="/base/precos" className={linkCls} activeProps={ativo}>
+            Preços de referência
+          </Link>
           <Link to="/base/fornecedores" className={linkCls} activeProps={ativo}>
             Fornecedores
           </Link>

@@ -57,6 +57,7 @@ function itens(): Item[] {
       base_item_id: null,
       fator: 1,
       link: null,
+      origem_preco: null,
     };
   });
 }

@@ -16,6 +16,7 @@ import { run } from "@/lib/data";
 import type { Json, TablesInsert } from "@/integrations/supabase/types";
 import { PACOTES_INICIAIS, SERVICO } from "@/lib/biblioteca";
 import { linhasDoModelo, normaliza } from "@/lib/sugestoes";
+import { dividir } from "@/lib/referencia";
 
 /** Copia o EVF inteiro (ambientes, medições, itens e cotações) como uma nova revisão. Retorna o id novo. */
 export async function duplicarEvf(evfId: string): Promise<string> {
@@ -384,10 +385,7 @@ export function buscadorDePreco(
 export async function aplicarPacote(evfId: string, pacoteId: string) {
   const pacote = PACOTES_INICIAIS.find((p) => p.id === pacoteId) ?? PACOTES_INICIAIS[0];
   if (!pacote) return;
-  const catalogo = await run(
-    supabase.from("catalogo_servicos").select("descricao, material_unit, mo_unit"),
-  );
-  const preco = buscadorDePreco(catalogo);
+  const preco = await carregarPrecificador();
   const linhas: LinhaNova[] = [];
   let ordem = 1;
   for (const a of pacote.ambientes) {
@@ -411,14 +409,17 @@ export async function gerarObraNova(
   existentes: Item[],
   ordemAmbientes: number,
 ) {
-  const catalogo = await run(
-    supabase.from("catalogo_servicos").select("descricao, material_unit, mo_unit"),
-  );
-  const preco = buscadorDePreco(catalogo);
+  const preco = await carregarPrecificador();
   const comPreco = (l: LinhaNova): LinhaNova => {
-    const desc = l.descricao ?? "";
-    const p = preco(desc) ?? (l.chave ? preco(SERVICO_DESC(l.chave)) : null);
-    return p ? { ...l, material_unit: p.material_unit, mo_unit: p.mo_unit || (l.mo_unit ?? 0) } : l;
+    const p = preco(l.descricao ?? "", l.chave);
+    return p
+      ? {
+          ...l,
+          material_unit: p.material_unit,
+          mo_unit: p.mo_unit,
+          origem_preco: p.origem,
+        }
+      : l;
   };
   const linhas: LinhaNova[] = obra.gerais.map(comPreco);
   for (const [k, a] of obra.ambientes.entries()) {
@@ -470,6 +471,159 @@ export async function gerarObraNova(
   return linhas.length;
 }
 
-function SERVICO_DESC(chave: string) {
-  return SERVICO[chave]?.desc ?? chave;
+// ------------------------------------------------------------------ Preços: catálogo + referência
+
+export interface RefPreco {
+  codigo: string;
+  descricao: string;
+  preco: number;
+  pct_mo: number | null;
+  base: string;
+}
+
+export interface PrecoAchado {
+  material_unit: number;
+  mo_unit: number;
+  origem: string;
+}
+
+/** (descrição, chave do serviço) → preço do catálogo do escritório ou da referência vinculada. */
+export type Precificador = (desc: string, chave?: string | null) => PrecoAchado | null;
+
+/** Base de referência ativa: a escolhida nas configurações ou a mais recente (não desonerada primeiro). */
+export async function baseAtiva(): Promise<string | null> {
+  const cfg = await run(
+    supabase.from("configuracoes").select("base_preco").eq("id", 1).maybeSingle(),
+  );
+  if (cfg?.base_preco) return cfg.base_preco;
+  const bs = await run(
+    supabase
+      .from("bases_referencia")
+      .select("*")
+      .order("desonerado")
+      .order("data_base", { ascending: false })
+      .limit(1),
+  );
+  return bs[0]?.base ?? null;
+}
+
+/** Preço de referência de cada serviço vinculado, na base ativa. */
+export async function carregarReferencia(): Promise<Map<string, RefPreco>> {
+  const mapa = new Map<string, RefPreco>();
+  const base = await baseAtiva();
+  if (!base) return mapa;
+  const vinc = await run(supabase.from("vinculos_preco").select("*"));
+  if (!vinc.length) return mapa;
+  const codigos = [...new Set(vinc.map((v) => v.codigo))];
+  const precos: { codigo: string; descricao: string; preco: number; pct_mo: number | null }[] = [];
+  for (let k = 0; k < codigos.length; k += 150)
+    precos.push(
+      ...(await run(
+        supabase
+          .from("precos_referencia")
+          .select("codigo, descricao, preco, pct_mo")
+          .eq("base", base)
+          .in("codigo", codigos.slice(k, k + 150)),
+      )),
+    );
+  const porCodigo = new Map(precos.map((p) => [p.codigo, p]));
+  for (const v of vinc) {
+    const p = porCodigo.get(v.codigo);
+    if (p)
+      mapa.set(v.chave, {
+        codigo: p.codigo,
+        descricao: p.descricao,
+        preco: Number(p.preco),
+        pct_mo: p.pct_mo == null ? null : Number(p.pct_mo),
+        base,
+      });
+  }
+  return mapa;
+}
+
+export function criarPrecificador(
+  catalogo: { descricao: string; material_unit: number; mo_unit: number }[],
+  ref: Map<string, RefPreco>,
+): Precificador {
+  const cat = buscadorDePreco(catalogo);
+  return (desc, chave) => {
+    const c = cat(desc) ?? (chave && SERVICO[chave] ? cat(SERVICO[chave].desc) : null);
+    if (c) return { ...c, origem: "Catálogo do escritório" };
+    const r = chave ? ref.get(chave) : undefined;
+    if (r) return { ...dividir(r.preco, r.pct_mo), origem: `${r.base} · ${r.codigo}` };
+    return null;
+  };
+}
+
+export async function carregarPrecificador(): Promise<Precificador> {
+  const catalogo = await run(
+    supabase.from("catalogo_servicos").select("descricao, material_unit, mo_unit"),
+  );
+  return criarPrecificador(catalogo, await carregarReferencia());
+}
+
+/** Todas as linhas de uma base de referência (paginado: o banco devolve 1.000 por vez). */
+export async function carregarBase(base: string) {
+  const out: {
+    codigo: string;
+    descricao: string;
+    unidade: string;
+    preco: number;
+    pct_mo: number | null;
+  }[] = [];
+  for (let de = 0; ; de += 1000) {
+    const lote = await run(
+      supabase
+        .from("precos_referencia")
+        .select("codigo, descricao, unidade, preco, pct_mo")
+        .eq("base", base)
+        .order("codigo")
+        .range(de, de + 999),
+    );
+    out.push(
+      ...lote.map((r) => ({
+        ...r,
+        preco: Number(r.preco),
+        pct_mo: r.pct_mo == null ? null : Number(r.pct_mo),
+      })),
+    );
+    if (lote.length < 1000) break;
+  }
+  return out;
+}
+
+/** Grava uma base importada (substitui a de mesmo nome). */
+export async function importarBase(
+  meta: { base: string; fonte: string; uf: string; data_base: string; desonerado: boolean },
+  registros: {
+    codigo: string;
+    descricao: string;
+    unidade: string;
+    preco: number;
+    pct_mo: number | null;
+  }[],
+  progresso?: (feito: number) => void,
+) {
+  await run(supabase.from("precos_referencia").delete().eq("base", meta.base));
+  for (let k = 0; k < registros.length; k += 500) {
+    await run(
+      supabase
+        .from("precos_referencia")
+        .insert(registros.slice(k, k + 500).map((r) => ({ ...meta, ...r })))
+        .select("id"),
+    );
+    progresso?.(Math.min(registros.length, k + 500));
+  }
+}
+
+/** Grava preços em vários itens de uma vez (em paralelo, de 10 em 10). */
+export async function atualizarPrecos(
+  itens: { id: string; material_unit: number; mo_unit: number; origem_preco: string }[],
+) {
+  for (let k = 0; k < itens.length; k += 10)
+    await Promise.all(
+      itens
+        .slice(k, k + 10)
+        .map(({ id, ...v }) => run(supabase.from("itens_evf").update(v).eq("id", id))),
+    );
 }

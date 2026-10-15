@@ -126,6 +126,7 @@ export type Database = {
       }
       configuracoes: {
         Row: {
+          base_preco: string | null
           cub_ref: string
           cub_uf: string
           cub_valor: number
@@ -134,6 +135,7 @@ export type Database = {
           nome_escritorio: string
         }
         Insert: {
+          base_preco?: string | null
           cub_ref?: string
           cub_uf?: string
           cub_valor?: number
@@ -142,6 +144,7 @@ export type Database = {
           nome_escritorio?: string
         }
         Update: {
+          base_preco?: string | null
           cub_ref?: string
           cub_uf?: string
           cub_valor?: number
@@ -278,6 +281,7 @@ export type Database = {
       }
       itens_evf: {
         Row: {
+          origem_preco: string | null
           link: string | null
           base_item_id: string | null
           base_qtd: string | null
@@ -301,6 +305,7 @@ export type Database = {
           unidade: string
         }
         Insert: {
+          origem_preco?: string | null
           link?: string | null
           base_item_id?: string | null
           base_qtd?: string | null
@@ -324,6 +329,7 @@ export type Database = {
           unidade?: string
         }
         Update: {
+          origem_preco?: string | null
           link?: string | null
           base_item_id?: string | null
           base_qtd?: string | null
@@ -413,9 +419,88 @@ export type Database = {
           },
         ]
       }
+      precos_referencia: {
+        Row: {
+          base: string
+          codigo: string
+          created_at: string
+          data_base: string
+          desonerado: boolean
+          descricao: string
+          fonte: string
+          id: string
+          pct_mo: number | null
+          preco: number
+          uf: string
+          unidade: string
+        }
+        Insert: {
+          base: string
+          codigo: string
+          created_at?: string
+          data_base: string
+          desonerado?: boolean
+          descricao: string
+          fonte?: string
+          id?: string
+          pct_mo?: number | null
+          preco?: number
+          uf?: string
+          unidade?: string
+        }
+        Update: {
+          base?: string
+          codigo?: string
+          created_at?: string
+          data_base?: string
+          desonerado?: boolean
+          descricao?: string
+          fonte?: string
+          id?: string
+          pct_mo?: number | null
+          preco?: number
+          uf?: string
+          unidade?: string
+        }
+        Relationships: []
+      }
+      vinculos_preco: {
+        Row: {
+          chave: string
+          codigo: string
+          descricao: string
+          fonte: string
+          updated_at: string
+        }
+        Insert: {
+          chave: string
+          codigo: string
+          descricao?: string
+          fonte?: string
+          updated_at?: string
+        }
+        Update: {
+          chave?: string
+          codigo?: string
+          descricao?: string
+          fonte?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      bases_referencia: {
+        Row: {
+          base: string
+          fonte: string
+          uf: string
+          data_base: string
+          desonerado: boolean
+          n: number
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

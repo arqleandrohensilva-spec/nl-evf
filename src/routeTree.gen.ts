@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedBaseCatalogoRouteImport } from './routes/_authenticated/base/catalogo'
 import { Route as AuthenticatedBaseConfiguracoesRouteImport } from './routes/_authenticated/base/configuracoes'
 import { Route as AuthenticatedBaseFornecedoresRouteImport } from './routes/_authenticated/base/fornecedores'
+import { Route as AuthenticatedBasePrecosRouteImport } from './routes/_authenticated/base/precos'
 import { Route as AuthenticatedBaseTaxasRouteImport } from './routes/_authenticated/base/taxas'
 import { Route as AuthenticatedEvfsIndexRouteImport } from './routes/_authenticated/evfs/index'
 import { Route as AuthenticatedEvfsIdRouteImport } from './routes/_authenticated/evfs/$id'
@@ -52,6 +53,11 @@ const AuthenticatedBaseFornecedoresRoute =
     path: '/base/fornecedores',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedBasePrecosRoute = AuthenticatedBasePrecosRouteImport.update({
+  id: '/base/precos',
+  path: '/base/precos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedBaseTaxasRoute = AuthenticatedBaseTaxasRouteImport.update({
   id: '/base/taxas',
   path: '/base/taxas',
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/base/catalogo': typeof AuthenticatedBaseCatalogoRoute
   '/base/configuracoes': typeof AuthenticatedBaseConfiguracoesRoute
   '/base/fornecedores': typeof AuthenticatedBaseFornecedoresRoute
+  '/base/precos': typeof AuthenticatedBasePrecosRoute
   '/base/taxas': typeof AuthenticatedBaseTaxasRoute
   '/evfs/$id': typeof AuthenticatedEvfsIdRoute
   '/imprimir/$id': typeof AuthenticatedImprimirIdRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/base/catalogo': typeof AuthenticatedBaseCatalogoRoute
   '/base/configuracoes': typeof AuthenticatedBaseConfiguracoesRoute
   '/base/fornecedores': typeof AuthenticatedBaseFornecedoresRoute
+  '/base/precos': typeof AuthenticatedBasePrecosRoute
   '/base/taxas': typeof AuthenticatedBaseTaxasRoute
   '/evfs/$id': typeof AuthenticatedEvfsIdRoute
   '/imprimir/$id': typeof AuthenticatedImprimirIdRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/_authenticated/base/catalogo': typeof AuthenticatedBaseCatalogoRoute
   '/_authenticated/base/configuracoes': typeof AuthenticatedBaseConfiguracoesRoute
   '/_authenticated/base/fornecedores': typeof AuthenticatedBaseFornecedoresRoute
+  '/_authenticated/base/precos': typeof AuthenticatedBasePrecosRoute
   '/_authenticated/base/taxas': typeof AuthenticatedBaseTaxasRoute
   '/_authenticated/evfs/$id': typeof AuthenticatedEvfsIdRoute
   '/_authenticated/imprimir/$id': typeof AuthenticatedImprimirIdRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/base/catalogo'
     | '/base/configuracoes'
     | '/base/fornecedores'
+    | '/base/precos'
     | '/base/taxas'
     | '/evfs/$id'
     | '/imprimir/$id'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/base/catalogo'
     | '/base/configuracoes'
     | '/base/fornecedores'
+    | '/base/precos'
     | '/base/taxas'
     | '/evfs/$id'
     | '/imprimir/$id'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/_authenticated/base/catalogo'
     | '/_authenticated/base/configuracoes'
     | '/_authenticated/base/fornecedores'
+    | '/_authenticated/base/precos'
     | '/_authenticated/base/taxas'
     | '/_authenticated/evfs/$id'
     | '/_authenticated/imprimir/$id'
@@ -195,6 +207,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBaseFornecedoresRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/base/precos': {
+      id: '/_authenticated/base/precos'
+      path: '/base/precos'
+      fullPath: '/base/precos'
+      preLoaderRoute: typeof AuthenticatedBasePrecosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/base/taxas': {
       id: '/_authenticated/base/taxas'
       path: '/base/taxas'
@@ -230,6 +249,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBaseCatalogoRoute: typeof AuthenticatedBaseCatalogoRoute
   AuthenticatedBaseConfiguracoesRoute: typeof AuthenticatedBaseConfiguracoesRoute
   AuthenticatedBaseFornecedoresRoute: typeof AuthenticatedBaseFornecedoresRoute
+  AuthenticatedBasePrecosRoute: typeof AuthenticatedBasePrecosRoute
   AuthenticatedBaseTaxasRoute: typeof AuthenticatedBaseTaxasRoute
   AuthenticatedEvfsIdRoute: typeof AuthenticatedEvfsIdRoute
   AuthenticatedImprimirIdRoute: typeof AuthenticatedImprimirIdRoute
@@ -240,6 +260,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBaseCatalogoRoute: AuthenticatedBaseCatalogoRoute,
   AuthenticatedBaseConfiguracoesRoute: AuthenticatedBaseConfiguracoesRoute,
   AuthenticatedBaseFornecedoresRoute: AuthenticatedBaseFornecedoresRoute,
+  AuthenticatedBasePrecosRoute: AuthenticatedBasePrecosRoute,
   AuthenticatedBaseTaxasRoute: AuthenticatedBaseTaxasRoute,
   AuthenticatedEvfsIdRoute: AuthenticatedEvfsIdRoute,
   AuthenticatedImprimirIdRoute: AuthenticatedImprimirIdRoute,

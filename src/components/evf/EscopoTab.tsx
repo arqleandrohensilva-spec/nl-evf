@@ -25,7 +25,9 @@ import {
   normaliza,
   quantidadeVinculada,
 } from "@/lib/sugestoes";
-import { buscadorDePreco, inserirItens } from "@/lib/actions";
+import { atualizarPrecos, inserirItens } from "@/lib/actions";
+import { usePrecificador, useReferencia } from "@/lib/precos";
+import { dividir } from "@/lib/referencia";
 import { agruparPorFase } from "@/lib/fases";
 import { interpretar, type Interpretacao } from "@/lib/interpretar";
 import { fmtM2, fmtN, fmtR } from "@/lib/format";
@@ -58,6 +60,7 @@ export function EscopoTab({ d }: { d: EvfData }) {
   const [novoAmb, setNovoAmb] = useState("");
   useEffect(() => setSel(new Set()), [filtro]);
   const res = useMemo(() => resumo(itens, caps), [itens, caps]);
+  const referencia = useReferencia().data;
   if (!evf) return null;
 
   const ids = new Set(ambientes.map((a) => a.id));
@@ -71,6 +74,19 @@ export function EscopoTab({ d }: { d: EvfData }) {
       amb ? i.ambiente_id === amb.id : !i.ambiente_id || !ids.has(i.ambiente_id),
     );
   const semPreco = itens.filter((i) => itemTotais(i).total === 0).length;
+  const preenchiveis = itens.filter(
+    (i) => Number(i.material_unit) + Number(i.mo_unit) === 0 && i.chave && referencia?.has(i.chave),
+  );
+  async function preencherReferencia() {
+    await atualizarPrecos(
+      preenchiveis.map((i) => {
+        const r = referencia!.get(i.chave!)!;
+        return { id: i.id, ...dividir(r.preco, r.pct_mo), origem_preco: `${r.base} · ${r.codigo}` };
+      }),
+    );
+    await mItem.invalidar();
+    toast.success(`${preenchiveis.length} itens com preço de referência.`);
+  }
   const selecionados = itens.filter((i) => sel.has(i.id));
   const alternar = (lista: string[], marcar: boolean) =>
     setSel((s) => {
@@ -110,6 +126,11 @@ export function EscopoTab({ d }: { d: EvfData }) {
           <span className="rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning">
             {semPreco} sem preço — o total ainda vai subir
           </span>
+        ) : null}
+        {preenchiveis.length ? (
+          <Button variant="outline" className="h-9" onClick={preencherReferencia}>
+            <Sparkles className="size-4" /> Preencher {preenchiveis.length} com a referência
+          </Button>
         ) : null}
         {!filtro && ehObraNova(evf.tipo_obra) && itens.length ? (
           <span className="ml-auto">
@@ -437,7 +458,9 @@ function FaseLinhas({
               ? { txt: `cotar (${cots}/3)`, alerta: true }
               : i.etapa === "Etapa futura"
                 ? { txt: "etapa futura", alerta: false }
-                : null;
+                : i.origem_preco && i.origem_preco !== "Catálogo do escritório"
+                  ? { txt: `ref. ${i.origem_preco.split(" ")[0]}`, alerta: false }
+                  : null;
         return (
           <tr key={i.id} className={sel.has(i.id) ? "bg-warning-soft/60" : undefined}>
             <td>
@@ -721,6 +744,12 @@ function ItemDetalhe({ d, item, onClose }: { d: EvfData; item: Item | null; onCl
               />
             </Campo>
           </div>
+          {i.origem_preco ? (
+            <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+              Preço de: <span className="font-medium text-foreground">{i.origem_preco}</span>.
+              Referência não é cotação; nos itens de maior peso, confirme com fornecedores.
+            </p>
+          ) : null}
           <Campo rotulo="Link do produto">
             <div className="px-1 py-1">
               <LinkCell value={i.link} onSave={(v) => upd({ link: v })} />
@@ -786,6 +815,7 @@ function AdicionarDialog({
   const { evf, todosItens, mItem, medicoes, caps } = d;
   const [q, setQ] = useState("");
   const [capLivre, setCapLivre] = useState("");
+  const precificar = usePrecificador();
   useEffect(() => {
     if (open) setQ("");
   }, [open]);
@@ -825,7 +855,7 @@ function AdicionarDialog({
         { chave: s.chave },
         amb,
         amb ? geometria(amb, medicoes) : null,
-        buscadorDePreco(catalogo),
+        precificar,
       );
       if (linha) await inserirItens(evf!.id, [linha], todosItens);
       await mItem.invalidar();
@@ -868,7 +898,7 @@ function AdicionarDialog({
   }
 
   async function aplicarPacote(id: string) {
-    const linhas = linhasDoModelo(id, amb, medicoes, buscadorDePreco(catalogo));
+    const linhas = linhasDoModelo(id, amb, medicoes, precificar);
     await inserirItens(evf!.id, linhas, todosItens);
     await mItem.invalidar();
     toast.success(`${linhas.length} itens adicionados em ${onde}.`);

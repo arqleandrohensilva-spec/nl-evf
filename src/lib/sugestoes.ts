@@ -196,12 +196,18 @@ export function sugerir(evf: Evf, itens: Item[], ambientes: Ambiente[]): Sugesta
   return [...out.values()];
 }
 
+/** Preço por descrição (e chave do serviço, para a referência vinculada). */
+export type PrecoFn = (
+  desc: string,
+  chave?: string | null,
+) => { material_unit: number; mo_unit: number; origem?: string } | null;
+
 /** Monta as linhas de itens de um modelo da biblioteca (sem evf_id, que o chamador completa). */
 export function linhasDoModelo(
   modeloId: string,
   ambiente: Ambiente | null,
   medicoes: Medicao[],
-  precoCatalogo: (desc: string) => { material_unit: number; mo_unit: number } | null,
+  precoCatalogo: PrecoFn,
 ) {
   const m = MODELO[modeloId];
   if (!m) return [];
@@ -215,7 +221,7 @@ export function linhaDoServico(
   im: ItemModelo,
   ambiente: Ambiente | null,
   g: Geometria | null,
-  precoCatalogo: (desc: string) => { material_unit: number; mo_unit: number } | null,
+  precoCatalogo: PrecoFn,
 ) {
   const s = SERVICO[im.chave];
   if (!s) return null;
@@ -227,7 +233,7 @@ export function linhaDoServico(
   const vinculada = base !== "manual" && base !== "item" && ambiente != null;
   const qtd =
     vinculada && g ? g[base as Exclude<Base, "manual" | "item">] * fator : (im.qtd ?? s.qtd ?? 1);
-  const preco = precoCatalogo(im.desc ?? s.desc) ?? precoCatalogo(s.desc);
+  const preco = precoCatalogo(im.desc ?? s.desc, s.chave) ?? precoCatalogo(s.desc, s.chave);
   return {
     ambiente_id: ambiente?.id ?? null,
     capitulo_codigo: s.cap,
@@ -236,7 +242,8 @@ export function linhaDoServico(
     quantidade: qtd,
     perda_pct: s.perda ?? 0,
     material_unit: preco?.material_unit ?? 0,
-    mo_unit: preco?.mo_unit ?? s.mo ?? 0,
+    mo_unit: preco ? preco.mo_unit : (s.mo ?? 0),
+    origem_preco: preco?.origem ?? null,
     tipo_preco: s.tipo,
     chave: s.chave,
     base_qtd: vinculada ? base : null,

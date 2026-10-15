@@ -51,6 +51,7 @@ const item = (descricao: string, chave: string | null, extra: Partial<Item> = {}
   base_item_id: null,
   fator: 1,
   link: null,
+  origem_preco: null,
   ...extra,
 });
 

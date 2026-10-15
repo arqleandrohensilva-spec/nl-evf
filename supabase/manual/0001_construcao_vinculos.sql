@@ -31,3 +31,15 @@ alter table public.evfs add column if not exists descricao_obra text;
 
 -- Dados da construção do zero (programa da casa) (2026-10-15)
 alter table public.evfs add column if not exists programa jsonb;
+
+-- Base de preços de referência (SINAPI importado) e vínculo serviço → composição (2026-10-15)
+create table if not exists public.precos_referencia (id uuid primary key default gen_random_uuid(), base text not null, fonte text not null default 'SINAPI', uf text not null default 'SP', data_base date not null, desonerado boolean not null default false, codigo text not null, descricao text not null, unidade text not null default '', preco numeric not null default 0, pct_mo numeric, created_at timestamptz not null default now());
+create index if not exists precos_referencia_base_idx on public.precos_referencia (base);
+create index if not exists precos_referencia_codigo_idx on public.precos_referencia (codigo);
+create table if not exists public.vinculos_preco (chave text primary key, codigo text not null, descricao text not null default '', fonte text not null default 'SINAPI', updated_at timestamptz not null default now());
+-- + RLS e policies anon iguais às demais tabelas
+create or replace view public.bases_referencia with (security_invoker = true) as
+  select base, fonte, uf, data_base, desonerado, count(*)::int as n from public.precos_referencia group by base, fonte, uf, data_base, desonerado;
+grant select on public.bases_referencia to anon;
+alter table public.configuracoes add column if not exists base_preco text;
+alter table public.itens_evf add column if not exists origem_preco text;

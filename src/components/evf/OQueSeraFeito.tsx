@@ -3,8 +3,8 @@ import { AlertTriangle, ArrowRight, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { SERVICO } from "@/lib/biblioteca";
-import { buscadorDePreco, inserirItens } from "@/lib/actions";
+import { inserirItens } from "@/lib/actions";
+import { usePrecificador } from "@/lib/precos";
 import { useCatalogo } from "@/lib/data";
 import { fmtN } from "@/lib/format";
 import type { Interpretacao, Proposta } from "@/lib/interpretar";
@@ -38,6 +38,7 @@ export function PropostasDialog({
 }) {
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [ocupado, setOcupado] = useState(false);
+  const precificar = usePrecificador();
   useEffect(() => {
     setSel(new Set(resultado?.propostas.map((p) => p.id) ?? []));
   }, [resultado]);
@@ -54,13 +55,10 @@ export function PropostasDialog({
     setOcupado(true);
     try {
       const escolhidas = resultado!.propostas.filter((p) => sel.has(p.id));
-      const preco = buscadorDePreco(catalogo ?? []);
       const linhas = escolhidas
         .filter((p) => p.acao === "adicionar")
         .map((p) => {
-          const pr =
-            preco(p.descricao) ??
-            (p.chave && SERVICO[p.chave] ? preco(SERVICO[p.chave]!.desc) : null);
+          const pr = precificar(p.descricao, p.chave);
           return {
             ambiente_id: p.obraToda ? null : ambienteId,
             capitulo_codigo: p.capitulo,
@@ -69,7 +67,8 @@ export function PropostasDialog({
             quantidade: p.quantidade,
             perda_pct: p.perda,
             material_unit: pr?.material_unit ?? 0,
-            mo_unit: pr?.mo_unit ?? p.mo,
+            mo_unit: pr ? pr.mo_unit : p.mo,
+            origem_preco: pr?.origem ?? null,
             tipo_preco: p.tipo,
             chave: p.chave,
             base_qtd: p.base_qtd,

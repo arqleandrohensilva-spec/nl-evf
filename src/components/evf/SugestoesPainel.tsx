@@ -3,8 +3,8 @@ import { ChevronDown, ChevronUp, Lightbulb, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SERVICO } from "@/lib/biblioteca";
-import { buscadorDePreco, inserirItens } from "@/lib/actions";
-import { useCatalogo } from "@/lib/data";
+import { inserirItens } from "@/lib/actions";
+import { usePrecificador } from "@/lib/precos";
 import { fmtN } from "@/lib/format";
 import { geometria, linhaDoServico, sugerir, type Sugestao } from "@/lib/sugestoes";
 import type { EvfData } from "./useEvfData";
@@ -21,7 +21,7 @@ export function SugestoesPainel({
   compacto?: boolean;
 }) {
   const { evf, todosItens: itens, filtro, ambientes, medicoes, mItem, mEvf } = d;
-  const catalogo = useCatalogo().data ?? [];
+  const precificar = usePrecificador();
   const [open, setOpen] = useState(aberto);
   const [ocupado, setOcupado] = useState(false);
   // As regras olham a obra inteira; com um ambiente em foco, mostra só o que é dele.
@@ -38,7 +38,7 @@ export function SugestoesPainel({
       { chave: s.chave, ...(s.base === "manual" || s.base === "item" ? { qtd: s.qtd } : {}) },
       s.base === "item" ? null : amb,
       amb ? geometria(amb, medicoes) : null,
-      buscadorDePreco(catalogo),
+      precificar,
     );
     if (!base) return null;
     const svc = SERVICO[s.chave];
