@@ -57,9 +57,10 @@ export function CotacoesTab({ d }: { d: EvfData }) {
         </div>
       </div>
       <p className="text-sm text-muted-foreground">
-        Padrão: média de 3 fornecedores. O valor considerado vira o preço unitário de material do
-        item. Ao trocar o critério, registre a justificativa. Cole o link da página do produto em
-        cada cotação; preço da internet é referência, não cotação formal: anote a data.
+        Aqui entra o <b>preço do material por unidade do item</b> (R$ por m², por un…), como o
+        fornecedor passa. O valor considerado (média de 3, ou menor/maior com justificativa) vira o
+        material do item no Escopo; a mão de obra fica no item. Cole o link da página do produto;
+        preço da internet é referência, não cotação formal: anote a data.
       </p>
       <div className="space-y-3">
         {lista.map((i) => {
@@ -131,7 +132,7 @@ export function CotacoesTab({ d }: { d: EvfData }) {
                 <thead>
                   <tr>
                     <th>Fornecedor</th>
-                    <th className="w-36 text-right">Valor (R$)</th>
+                    <th className="w-40 text-right">Valor (R$ por {i.unidade})</th>
                     <th className="w-40">Data</th>
                     <th className="w-56">Link do produto</th>
                     <th className="w-10" />

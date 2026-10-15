@@ -211,11 +211,23 @@ export function valorCotacao(valores: number[], criterio: string) {
   return v.reduce((s, x) => s + x, 0) / v.length;
 }
 
-export type TipoMedicao = "soma" | "vao" | "shaft_canto" | "shaft_parede";
+export type TipoMedicao =
+  "soma" | "vao" | "vao_area" | "soma_area" | "shaft_canto" | "shaft_parede";
+
+/** Tipos lançados direto pela área (vão curvo, arco, forma irregular): a área fica em "largura". */
+export const TIPOS_POR_AREA: TipoMedicao[] = ["vao_area", "soma_area"];
 
 export function tipoMedicao(m: Pick<Medicao, "sinal"> & { tipo?: string | null }): TipoMedicao {
   const t = m.tipo;
-  if (t === "soma" || t === "vao" || t === "shaft_canto" || t === "shaft_parede") return t;
+  if (
+    t === "soma" ||
+    t === "vao" ||
+    t === "vao_area" ||
+    t === "soma_area" ||
+    t === "shaft_canto" ||
+    t === "shaft_parede"
+  )
+    return t;
   return m.sinal < 0 ? "vao" : "soma";
 }
 
@@ -223,6 +235,7 @@ export function tipoMedicao(m: Pick<Medicao, "sinal"> & { tipo?: string | null }
  * Quanto cada linha de medição mexe no ambiente (m²):
  * - soma: entra no total de medições (trechos de parede, áreas irregulares)
  * - vão: sai das medições e das paredes (porta, janela)
+ * - vão por área / trecho por área: a área em m² digitada direto (vão curvo, arco, forma irregular)
  * - shaft/pilar no canto: sai do piso e do teto; as faces do shaft substituem a parede escondida
  * - shaft/pilar no meio da parede: sai do piso e do teto e soma as duas laterais nas paredes
  */
@@ -236,6 +249,10 @@ export function efeitoMedicao(m: Medicao) {
       return { medicoes: l * h * q, piso: 0, paredes: 0 };
     case "vao":
       return { medicoes: -l * h * q, piso: 0, paredes: -l * h * q };
+    case "vao_area":
+      return { medicoes: -l * q, piso: 0, paredes: -l * q };
+    case "soma_area":
+      return { medicoes: l * q, piso: 0, paredes: 0 };
     case "shaft_canto":
       return { medicoes: 0, piso: -l * p * q, paredes: 0 };
     case "shaft_parede":

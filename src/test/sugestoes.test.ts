@@ -94,6 +94,11 @@ describe("medições que mexem no ambiente", () => {
     expect(g.paredes).toBeCloseTo(9.96 * 2.27 - 0.86 * 2.1 - 0.36);
     expect(g.piso).toBeCloseTo(6.164);
   });
+  it("vão curvo lançado direto pela área sai das paredes", () => {
+    const g = geometria(wc, [med({ tipo: "vao_area", largura: 1.37, sinal: -1 })]);
+    expect(g.paredes).toBeCloseTo(9.96 * 2.27 - 1.37);
+  });
+
   it("shaft no canto tira do piso e do teto, paredes iguais", () => {
     const g = geometria(wc, [
       med({ tipo: "shaft_canto", largura: 0.4, profundidade: 0.3, altura: 2.27, sinal: -1 }),

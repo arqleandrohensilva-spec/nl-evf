@@ -16,6 +16,7 @@ import { run } from "@/lib/data";
 import type { Json, TablesInsert } from "@/integrations/supabase/types";
 import { PACOTES_INICIAIS, SERVICO } from "@/lib/biblioteca";
 import { linhasDoModelo, normaliza } from "@/lib/sugestoes";
+import { listaDeMateriais } from "@/lib/insumos";
 import { dividir } from "@/lib/referencia";
 
 /** Copia o EVF inteiro (ambientes, medições, itens e cotações) como uma nova revisão. Retorna o id novo. */
@@ -299,6 +300,25 @@ export async function exportarXlsx(
   add("3_PESQUISA DE PREÇOS", pesq, [8, 50, 16, 10, 18, 12, 30, 18, 12, 30, 18, 12, 30, 30]);
   add("4_TAXA ADM", taxa, [8, 42, 8, 16]);
   add("5_CURVA ABC", abcAoa, [8, 58, 7, 9, 14, 10, 12, 8]);
+  const mats = listaDeMateriais(itens);
+  if (mats.length)
+    add(
+      "LISTA DE MATERIAIS",
+      [
+        ...cab,
+        ["MATERIAL", "QUANTIDADE", "UN", "COMPRAR", "SERVIÇOS DE ORIGEM"],
+        ...mats.map((m) => [
+          m.nome,
+          r2(m.total),
+          m.un,
+          m.compra,
+          m.origens.map((o) => o.item.codigo).join(", "),
+        ]),
+        [],
+        ["Coeficientes de referência para EVF; o quantitativo final sai do projeto executivo."],
+      ],
+      [44, 14, 6, 30, 40],
+    );
   if (!filtro && ambientes.length) {
     const pa = porAmbiente(todos, caps, ambientes, true);
     const aoa: (string | number)[][] = [

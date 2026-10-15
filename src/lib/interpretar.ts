@@ -334,7 +334,8 @@ export function interpretar(
         h = n(m.altura),
         q = n(m.quantidade);
       const t = tipoMedicao(m);
-      if (t === "vao") {
+      if (t === "vao_area") area -= l * q * Math.min(1, H / (pd || H));
+      else if (t === "vao") {
         if (/total/.test(normaliza(m.descricao ?? "")))
           area -= l * h * q * Math.min(1, H / (pd || H));
         else if (h >= 1.8) area -= l * Math.min(H, h) * q;

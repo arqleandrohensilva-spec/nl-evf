@@ -28,6 +28,7 @@ import {
 import { atualizarPrecos, inserirItens } from "@/lib/actions";
 import { usePrecificador, useReferencia } from "@/lib/precos";
 import { dividir } from "@/lib/referencia";
+import { compra, consumoDoItem, INSUMOS } from "@/lib/insumos";
 import { agruparPorFase } from "@/lib/fases";
 import { interpretar, type Interpretacao } from "@/lib/interpretar";
 import { fmtM2, fmtN, fmtR } from "@/lib/format";
@@ -356,7 +357,12 @@ function Bloco({
                     <th>Serviço</th>
                     <th className="w-28 text-right">Qtd</th>
                     <th className="w-14">Un</th>
-                    <th className="w-28 text-right">Unitário</th>
+                    <th
+                      className="w-32 text-right"
+                      title="Material + mão de obra, por unidade do item"
+                    >
+                      R$ por unidade
+                    </th>
                     <th className="w-32 text-right">Total</th>
                     <th className="w-28" />
                     <th className="w-20" />
@@ -505,11 +511,21 @@ function FaseLinhas({
               )}
             </td>
             <td className="text-sm">{i.unidade}</td>
-            <td
-              className="num text-right text-sm"
-              title={`Material ${fmtR(Number(i.material_unit))} + M.O. ${fmtR(Number(i.mo_unit))}`}
-            >
-              {unit ? fmtN(unit) : "—"}
+            <td className="text-right text-sm">
+              <button
+                className="num w-full rounded px-1 text-right hover:bg-muted"
+                title={`Material ${fmtR(Number(i.material_unit))} + M.O. ${fmtR(Number(i.mo_unit))} por ${i.unidade}. Clique para editar.`}
+                onClick={() => abrir(i.id)}
+              >
+                {unit ? (
+                  <>
+                    {fmtN(unit)}
+                    <span className="text-[11px] text-muted-foreground">/{i.unidade}</span>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">definir</span>
+                )}
+              </button>
             </td>
             <td className="num text-right font-semibold">{fmtR(t.total)}</td>
             <td>
@@ -699,10 +715,21 @@ function ItemDetalhe({ d, item, onClose }: { d: EvfData; item: Item | null; onCl
               <NumCell value={Number(i.fator)} label="Fator" onSave={(v) => upd({ fator: v })} />
             </Campo>
           ) : null}
+          <p className="rounded-md bg-primary-soft/60 px-3 py-2 text-xs">
+            Os valores são sempre <b>por {i.unidade}</b>. Total = quantidade × (material + mão de
+            obra).{" "}
+            {i.tipo_preco === "cotacao"
+              ? "Este item é cotado: lance o preço do fornecedor na aba Cotações; aqui fica só a mão de obra."
+              : "Este item não é cotado: digite aqui o material e a mão de obra."}
+          </p>
           <div className="grid grid-cols-2 gap-3">
             <Campo
-              rotulo="Material unitário"
-              {...(i.tipo_preco === "cotacao" ? { dica: "Vem da aba Cotações." } : {})}
+              rotulo={`Material (R$ por ${i.unidade})`}
+              dica={
+                i.tipo_preco === "cotacao"
+                  ? "Vem da aba Cotações: o valor considerado das 3 cotações."
+                  : `Preço do material de 1 ${i.unidade}.`
+              }
             >
               {i.tipo_preco === "cotacao" ? (
                 <span className="num block px-2 py-2 text-right">
@@ -716,7 +743,10 @@ function ItemDetalhe({ d, item, onClose }: { d: EvfData; item: Item | null; onCl
                 />
               )}
             </Campo>
-            <Campo rotulo="Mão de obra unitária">
+            <Campo
+              rotulo={`Mão de obra (R$ por ${i.unidade})`}
+              dica={`M.O. para executar 1 ${i.unidade}.`}
+            >
               <NumCell
                 value={Number(i.mo_unit)}
                 label="Mão de obra unitária"
@@ -755,6 +785,26 @@ function ItemDetalhe({ d, item, onClose }: { d: EvfData; item: Item | null; onCl
               <LinkCell value={i.link} onSave={(v) => upd({ link: v })} />
             </div>
           </Campo>
+          {consumoDoItem(i).length ? (
+            <div className="rounded-lg border p-3 text-sm">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Materiais deste item
+              </div>
+              <ul className="space-y-0.5">
+                {consumoDoItem(i).map((c) => (
+                  <li key={c.insumo} className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0">{INSUMOS[c.insumo]?.nome}</span>
+                    <span className="shrink-0 text-right text-xs text-muted-foreground">
+                      <span className="num block">
+                        {fmtN(c.qtd)} {INSUMOS[c.insumo]?.un}
+                      </span>
+                      {compra(c.insumo, c.qtd)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <div className="rounded-lg bg-muted/60 p-3 text-sm">
             <div className="flex justify-between">
               <span>Material</span>

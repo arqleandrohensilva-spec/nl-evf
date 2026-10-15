@@ -18,6 +18,7 @@ import { ResumoTab } from "@/components/evf/ResumoTab";
 import { AbcTab } from "@/components/evf/AbcTab";
 import { AuditorTab } from "@/components/evf/AuditorTab";
 import { LevantamentoTab } from "@/components/evf/LevantamentoTab";
+import { MateriaisTab } from "@/components/evf/MateriaisTab";
 import { Caminho } from "@/components/evf/Caminho";
 
 export const Route = createFileRoute("/_authenticated/evfs/$id")({
@@ -246,6 +247,7 @@ function Page() {
           {[
             ["levantamento", "1 · Ambientes e medidas"],
             ["escopo", "2 · Escopo"],
+            ["materiais", "Materiais"],
             ["cotacoes", "3 · Cotações"],
             ["resumo", "4 · Resumo"],
             ["abc", "Curva ABC"],
@@ -260,7 +262,8 @@ function Page() {
             </TabsTrigger>
           ))}
         </TabsList>
-        {d.ambientes.length && ["escopo", "cotacoes", "resumo", "abc"].includes(aba) ? (
+        {d.ambientes.length &&
+        ["escopo", "materiais", "cotacoes", "resumo", "abc"].includes(aba) ? (
           <div
             role="group"
             aria-label="Ambiente em foco"
@@ -293,6 +296,9 @@ function Page() {
         ) : null}
         <TabsContent value="escopo" className="mt-4">
           <EscopoTab d={dv} />
+        </TabsContent>
+        <TabsContent value="materiais" className="mt-4">
+          <MateriaisTab d={dv} />
         </TabsContent>
         <TabsContent value="cotacoes" className="mt-4">
           <CotacoesTab d={dv} />

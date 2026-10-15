@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { efeitoMedicao, tipoMedicao, totalMedicao, type Medicao } from "@/lib/calc";
+import { efeitoMedicao, tipoMedicao, TIPOS_POR_AREA, totalMedicao, type Medicao } from "@/lib/calc";
 import { fmtM2, fmtN } from "@/lib/format";
 import { geometria } from "@/lib/sugestoes";
 import { NumCell, SelectCell, TextCell } from "./cells";
@@ -11,6 +11,8 @@ import { ehObraNova, ObraNova } from "./ObraNova";
 const TIPOS = [
   { value: "soma", label: "+ trecho (soma)" },
   { value: "vao", label: "− vão (porta, janela)" },
+  { value: "vao_area", label: "− vão por área (curvo, arco)" },
+  { value: "soma_area", label: "+ trecho por área (m²)" },
   { value: "shaft_canto", label: "Shaft / pilar no canto" },
   { value: "shaft_parede", label: "Shaft / pilar no meio da parede" },
 ];
@@ -74,7 +76,7 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
         const ms = medicoes.filter((m) => m.ambiente_id === a.id);
         const g = geometria(a, medicoes);
         const vaosMed = ms
-          .filter((m) => tipoMedicao(m) === "vao")
+          .filter((m) => tipoMedicao(m) === "vao" || tipoMedicao(m) === "vao_area")
           .reduce((s, m) => s - efeitoMedicao(m).paredes, 0);
         const shafts = ms.filter(ehShaft).reduce((s, m) => s - efeitoMedicao(m).piso, 0);
         const updA = (v: Record<string, unknown>) => mAmb.update.mutate({ id: a.id, ...v });
@@ -145,9 +147,10 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                 Portas, janelas, shafts e medições detalhadas ({ms.length})
               </summary>
               <p className="mt-2 text-xs text-muted-foreground">
-                Lance cada porta e janela com “+ Vão” (largura × altura): elas saem das paredes.
-                Shaft ou pilar com “+ Shaft / pilar” (largura × profundidade): sai do piso e do
-                teto.
+                Lance cada porta e janela com “+ Vão” (largura × altura): elas saem das paredes. Vão
+                curvo ou em arco, que não dá para medir em largura × altura: escolha o tipo “vão por
+                área” e digite os m². Shaft ou pilar com “+ Shaft / pilar” (largura × profundidade):
+                sai do piso e do teto.
               </p>
               <div className="overflow-x-auto">
                 <table className="tbl mt-2 min-w-[960px]">
@@ -195,20 +198,39 @@ export function LevantamentoTab({ d }: { d: EvfData }) {
                               }
                             />
                           </td>
-                          <td>
-                            <NumCell
-                              value={Number(m.largura)}
-                              label="Largura"
-                              onSave={(v) => mMed.update.mutate({ id: m.id, largura: v })}
-                            />
-                          </td>
-                          <td>
-                            <NumCell
-                              value={Number(m.altura)}
-                              label="Altura"
-                              onSave={(v) => mMed.update.mutate({ id: m.id, altura: v })}
-                            />
-                          </td>
+                          {TIPOS_POR_AREA.includes(tipoMedicao(m)) ? (
+                            <td colSpan={2}>
+                              <div className="flex items-center gap-1">
+                                <NumCell
+                                  value={Number(m.largura)}
+                                  label="Área (m²)"
+                                  onSave={(v) =>
+                                    mMed.update.mutate({ id: m.id, largura: v, altura: 1 })
+                                  }
+                                />
+                                <span className="shrink-0 pr-1 text-xs text-muted-foreground">
+                                  m² (área direta)
+                                </span>
+                              </div>
+                            </td>
+                          ) : (
+                            <>
+                              <td>
+                                <NumCell
+                                  value={Number(m.largura)}
+                                  label="Largura"
+                                  onSave={(v) => mMed.update.mutate({ id: m.id, largura: v })}
+                                />
+                              </td>
+                              <td>
+                                <NumCell
+                                  value={Number(m.altura)}
+                                  label="Altura"
+                                  onSave={(v) => mMed.update.mutate({ id: m.id, altura: v })}
+                                />
+                              </td>
+                            </>
+                          )}
                           <td>
                             {ehShaft(m) ? (
                               <NumCell
