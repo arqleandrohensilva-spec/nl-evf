@@ -361,7 +361,8 @@ export function compra(insumo: string, total: number): string {
     return `${k} ${k === 1 ? nome : plural(nome)} (${ins.emb.nome})`;
   }
   if (ins.un === "un") return `${Math.ceil(total)} un`;
-  if (/^placa_|rodape_pecas/.test(insumo)) return `${fmt(total, 1)} ${ins.un} (em caixas do fabricante)`;
+  if (/^placa_|rodape_pecas/.test(insumo))
+    return `${fmt(total, 1)} ${ins.un} (em caixas do fabricante)`;
   return `${fmt(total, ins.un === "m³" ? 2 : 1)} ${ins.un}`;
 }
 
