@@ -36,6 +36,8 @@ import { ETAPA_OPTIONS, LinkCell, NumCell, SelectCell, TextCell, TIPO_OPTIONS } 
 import { EXEMPLO_AMBIENTE, EXEMPLO_OBRA, PropostasDialog } from "./OQueSeraFeito";
 import { SugestoesPainel } from "./SugestoesPainel";
 import { ehObraNova, ObraNova } from "./ObraNova";
+import { IntervencoesBotoes } from "./Intervencoes";
+import { comoSeFaz } from "@/lib/execucao";
 import type { EvfData } from "./useEvfData";
 
 function proximoCodigo(itens: Item[], cap: number) {
@@ -282,9 +284,11 @@ function Bloco({
 
       {aberto ? (
         <div className="space-y-3 p-4">
+          {amb ? <IntervencoesBotoes d={d} amb={amb} onResultado={setResultado} /> : null}
           <div className="rounded-lg border bg-card p-3">
             <div className="mb-1 flex items-center gap-2 text-sm font-medium">
-              <PenLine className="size-4 text-primary" aria-hidden /> O que será feito
+              <PenLine className="size-4 text-primary" aria-hidden />{" "}
+              {amb ? "Ou descreva com suas palavras" : "O que será feito"}
               {!mostrarCaixa ? (
                 <button
                   className="ml-auto text-xs font-normal text-primary underline"
@@ -758,6 +762,25 @@ function ItemDetalhe({
               <LinkCell value={i.link} onSave={(v) => upd({ link: v })} />
             </div>
           </Campo>
+          {comoSeFaz(i) ? (
+            <details className="rounded-lg border p-3 text-sm">
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Como se faz
+              </summary>
+              <ol className="mt-2 list-decimal space-y-0.5 pl-5">
+                {comoSeFaz(i)!.passos.map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ol>
+              {comoSeFaz(i)!.cuidados?.length ? (
+                <ul className="mt-2 list-disc space-y-0.5 pl-5 text-warning">
+                  {comoSeFaz(i)!.cuidados!.map((t) => (
+                    <li key={t}>{t}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </details>
+          ) : null}
           {consumoDoItem(i).length ? (
             <div className="rounded-lg border p-3 text-sm">
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
