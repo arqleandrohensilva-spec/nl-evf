@@ -139,6 +139,30 @@ export const EXECUCAO: Record<string, ComoSeFaz> = {
       "Juntas de movimentação em áreas grandes e na transição entre ambientes.",
     ],
   },
+  granilite_liquido: {
+    passos: [
+      "Base cimentícia firme, nivelada e curada (cerca de 28 dias); medir a umidade antes de começar.",
+      "Preparo mecânico da base: lixar ou fresar, abrir trincas e corrigir com argamassa ou epóxi.",
+      "Aspirar o pó e aplicar o primer.",
+      "Fixar os perfis de junta (latão ou alumínio) conforme a paginação.",
+      "Lançar a massa de granilite (cimento ou resina + agregados) em 5 a 10 mm e nivelar.",
+      "Após a cura inicial, desbastar e polir com lixas de grana crescente.",
+      "Estucar os poros, polir de novo e aplicar o selador/impermeabilizante de acabamento.",
+    ],
+    cuidados: [
+      "Tráfego leve em 24 a 48 h; uso normal e móveis só depois de cerca de 7 dias.",
+      "Área molhada: impermeabilização embaixo do contrapiso e acabamento antiderrapante.",
+      "O polimento faz muito pó e lama: proteger paredes, ralos e marcenaria.",
+      "Executar antes da marcenaria e da pintura final; proteger depois de pronto.",
+    ],
+  },
+  rodape_granilite: {
+    passos: [
+      "Executar junto com o piso, mesma massa e cor.",
+      "Meia-cana ou rodapé reto moldado com perfil de arremate no topo.",
+      "Polir e selar com o piso.",
+    ],
+  },
   piso_externo: {
     passos: [
       "Base com caimento para escoar a água.",

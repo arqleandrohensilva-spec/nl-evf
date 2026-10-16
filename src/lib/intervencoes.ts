@@ -93,9 +93,36 @@ export const INTERVENCOES: Intervencao[] = [
           ["grande", "Porcelanato grande (90 cm ou mais)"],
           ["vinilico", "Vinílico"],
           ["laminado", "Laminado"],
+          ["granilite", "Granilite líquido"],
           ["externo", "Antiderrapante (área externa)"],
         ],
         padrao: () => "porcelanato",
+      },
+      {
+        id: "acabamento",
+        texto: "Acabamento do granilite",
+        tipo: "escolha",
+        opcoes: [
+          ["polido", "Polido (brilho)"],
+          ["fosco", "Fosco / acetinado"],
+          ["antiderrapante", "Antiderrapante"],
+        ],
+        padrao: (c) => (c.molhado ? "antiderrapante" : "polido"),
+        quando: (r) => r["tipo"] === "granilite",
+        ajuda:
+          "Granilite polido escorrega molhado: em banheiro e área externa, prefira antiderrapante.",
+      },
+      {
+        id: "juntas",
+        texto: "Juntas com perfil (latão ou alumínio)?",
+        tipo: "escolha",
+        opcoes: [
+          ["sim", "Sim, com perfis"],
+          ["nao", "Não, piso contínuo"],
+        ],
+        padrao: () => "sim",
+        quando: (r) => r["tipo"] === "granilite",
+        ajuda: "Os perfis controlam fissuras de retração e podem desenhar a paginação.",
       },
       {
         id: "rodape",
@@ -103,6 +130,7 @@ export const INTERVENCOES: Intervencao[] = [
         tipo: "escolha",
         opcoes: [
           ["novo", "Rodapé novo"],
+          ["granilite", "Rodapé em granilite (contínuo com o piso)"],
           ["mantem", "Mantém o atual"],
           ["naotem", "Não tem (parede revestida)"],
         ],
@@ -114,6 +142,10 @@ export const INTERVENCOES: Intervencao[] = [
       const molhado = r["molhado"] === "sim";
       const tipo = String(r["tipo"]);
       const seco = tipo === "vinilico" || tipo === "laminado";
+      if (tipo === "granilite") {
+        granilite(r, m, c, avisos, molhado);
+        return;
+      }
       if (r["atual"] === "retirar") m.propor("rem_piso", t, "O piso atual sai.");
       if (r["atual"] !== "porcima" || seco)
         m.propor(
@@ -163,6 +195,7 @@ export const INTERVENCOES: Intervencao[] = [
       const p = m.props.get(tipo === "externo" ? "piso_externo" : "piso");
       if (p) p.perda = tipo === "grande" ? 15 : seco ? 5 : 10;
       if (r["rodape"] === "novo") m.propor("rodape", t, "Rodapé novo.");
+      else if (r["rodape"] === "granilite") m.propor("rodape_granilite", t, "Rodapé em granilite.");
       if (r["atual"] !== "naotem") {
         m.propor("soleira", t, "O nível muda na porta: soleira de transição.", { qtd: 1 });
         if (r["atual"] === "porcima")
@@ -643,4 +676,62 @@ export function aplicarIntervencao(
       `${amb.nome} ainda não tem medidas: os serviços ligados ao piso, às paredes e ao teto entram com 0 e se ajustam quando você informar as medidas.`,
     );
   return m.fechar(avisos, []);
+}
+
+/** Granilite líquido: base cimentícia curada, impermeabilização protegida e aplicação especializada. */
+function granilite(r: Respostas, m: Montador, c: Ctx, avisos: string[], molhado: boolean) {
+  const t = "Piso";
+  const atual = r["atual"];
+  if (atual === "retirar") m.propor("rem_piso", t, "O piso atual sai.");
+  if (atual === "porcima")
+    avisos.push(
+      "Granilite sobre piso existente: só com o piso firme (sem peças ocas), esmalte lixado e juntas preenchidas. Confirme com o aplicador; o nível sobe de 5 a 10 mm.",
+    );
+  if (molhado && atual !== "porcima")
+    m.propor("imperm_piso", t, "Área molhada: impermeabilizar a base antes do contrapiso.");
+  if (molhado && atual !== "porcima")
+    m.propor("teste_estanqueidade", t, "Testar a impermeabilização (72 h) antes de cobrir.");
+  if (atual !== "porcima")
+    m.propor(
+      "regularizacao_contrapiso",
+      t,
+      molhado
+        ? "Contrapiso sobre a impermeabilização (protege a manta) e com caimento: é a base do granilite."
+        : "Base cimentícia nivelada e firme para o granilite.",
+      {
+        desc: `Contrapiso para granilite${molhado ? " (proteção da impermeabilização, com caimento para o ralo)" : ", nivelado e desempenado"} – ${c.nome}`,
+      },
+    );
+  avisos.push(
+    "O contrapiso precisa de cerca de 28 dias de cura e umidade baixa antes do granilite: prever no cronograma.",
+  );
+  if (molhado) {
+    if (r["ralo"] === "muda" || r["ralo"] === "novo") {
+      m.propor("ponto_esgoto", t, "Ralo em lugar novo pede ponto de esgoto.", { qtd: 1 });
+      m.propor("fechamento_rasgos", t, "Fechar o rasgo da tubulação.");
+    }
+    m.propor("adequacao_ralo", t, "Ajustar o ralo à altura final do granilite.");
+    m.propor("ralo", t, "Grelha nova.", { desc: "Ralo (grelha nova)" });
+  }
+  const acab: Record<string, string> = {
+    polido: "polido",
+    fosco: "fosco/acetinado",
+    antiderrapante: "antiderrapante",
+  };
+  m.propor("granilite_liquido", t, "Piso novo em granilite líquido.", {
+    desc: `Piso em granilite líquido, acabamento ${acab[String(r["acabamento"])] ?? "polido"}${r["juntas"] === "sim" ? ", com perfis de junta" : ", contínuo"} (preparo da base, primer, aplicação, polimento e selador) – ${c.nome}`,
+    especifico: true,
+  });
+  if (r["juntas"] === "nao")
+    avisos.push(
+      "Sem perfis, áreas grandes ou com recortes tendem a fissurar: o aplicador costuma serrar juntas de controle.",
+    );
+  if (r["acabamento"] === "polido" && molhado)
+    avisos.push("Granilite polido em área molhada fica escorregadio.");
+  if (r["rodape"] === "granilite") m.propor("rodape_granilite", t, "Rodapé contínuo com o piso.");
+  else if (r["rodape"] === "novo") m.propor("rodape", t, "Rodapé novo.");
+  if (atual !== "naotem")
+    m.propor("soleira", t, "O nível muda na porta: soleira de transição.", { qtd: 1 });
+  if (atual === "porcima")
+    m.propor("ajuste_porta", t, "Porta precisa ser ajustada ao piso mais alto.");
 }

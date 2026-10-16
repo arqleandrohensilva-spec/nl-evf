@@ -51,6 +51,31 @@ describe("intervenções guiadas", () => {
     expect(res.propostas.find((p) => p.chave === "piso")?.quantidade).toBeCloseTo(6.164, 2);
   });
 
+  it("granilite líquido em banheiro: impermeabilização protegida, sem piso cerâmico", () => {
+    const iv = I("piso");
+    const r = { ...respostasPadrao(iv, contexto(wc, 9.96)), tipo: "granilite" };
+    expect(respostasPadrao(iv, contexto(wc, 9.96))["acabamento"]).toBe("antiderrapante");
+    const res = aplicarIntervencao(iv, { ...r, rodape: "granilite" }, wc, [porta], []);
+    const ch = res.propostas.map((p) => p.chave);
+    expect(ch).toEqual(
+      expect.arrayContaining([
+        "rem_piso",
+        "imperm_piso",
+        "teste_estanqueidade",
+        "regularizacao_contrapiso",
+        "granilite_liquido",
+        "rodape_granilite",
+        "ralo",
+      ]),
+    );
+    expect(ch).not.toContain("piso");
+    expect(res.propostas.find((p) => p.chave === "granilite_liquido")?.quantidade).toBeCloseTo(
+      6.164,
+      2,
+    );
+    expect(res.avisos.join(" ")).toMatch(/28 dias/);
+  });
+
   it("piso vinílico por cima, área seca: sem impermeabilização, com ajuste de porta", () => {
     const sala = { ...wc, id: "s", nome: "Sala" };
     const res = aplicarIntervencao(
