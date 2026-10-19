@@ -180,6 +180,16 @@ describe("interpretar o que será feito", () => {
     expect(r.naoEntendi).toEqual([]);
   });
 
+  it("'azulejo' com remoção já no escopo propõe a instalação, não a remoção", () => {
+    const rem = item("Remoção de revestimento de parede – Banheiro", "rem_parede");
+    const semChave = item("Remoção de revestimento de parede", null);
+    for (const existente of [rem, semChave]) {
+      const r = interpretar("Azulejo", wc, [porta], [existente]);
+      expect(r.propostas.map((p) => p.chave)).toContain("parede_rev");
+      expect(r.jaNoEscopo).toHaveLength(0);
+    }
+  });
+
   it("'tirar' vale só até o próximo verbo", () => {
     const r = interpretar("Tirar o piso, deixar plano, piso novo e pintar o teto.", wc, [], []);
     const ch = r.propostas.map((p) => p.chave);

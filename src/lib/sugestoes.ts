@@ -75,10 +75,19 @@ export function quantidadeVinculada(
 }
 
 /** O item é (ou equivale a) o serviço da biblioteca? */
+const EH_REMOCAO = /^(rem_|demol_)/;
+const TEXTO_REMOCAO = /\b(remocao|retirada|demolicao|arrancar|retirar|remover)\b/;
+
 export function itemEh(item: Item, chave: string) {
   if (item.chave === chave) return true;
+  // Item com chave conhecida é aquele serviço e nenhum outro.
+  if (item.chave && SERVICO[item.chave]) return false;
   const s = SERVICO[chave];
-  return s ? s.match.test(normaliza(item.descricao)) : false;
+  if (!s) return false;
+  const desc = normaliza(item.descricao);
+  // "Remoção de revestimento de parede" não é o revestimento de parede (e vice-versa).
+  if (TEXTO_REMOCAO.test(desc) !== EH_REMOCAO.test(chave)) return false;
+  return s.match.test(desc);
 }
 
 export interface Sugestao {

@@ -858,6 +858,25 @@ interface Escolha {
 }
 
 /** "+ Serviço": catálogo do escritório + biblioteca, item livre e pacotes prontos — tudo no bloco. */
+/** Palavras de obra que não aparecem na descrição do serviço ("azulejo" → revestimento de parede). */
+const SINONIMOS: Record<string, string[]> = {
+  azulejo: ["revestimento de parede", "revestimento"],
+  azulejos: ["revestimento de parede", "revestimento"],
+  ceramica: ["revestimento"],
+  porcelanato: ["revestimento"],
+  pastilha: ["revestimento de parede"],
+  assentamento: ["revestimento"],
+  massa: ["reboco", "emassamento"],
+  reboco: ["regularizacao de reboco", "emboco"],
+  tinta: ["pintura"],
+  gesso: ["forro de gesso", "forro"],
+  pia: ["cuba"],
+  privada: ["vaso", "bacia"],
+  luz: ["iluminacao", "luminaria"],
+  tomadas: ["tomada"],
+  entulho: ["cacamba", "entulho"],
+};
+
 function AdicionarDialog({
   open,
   onOpenChange,
@@ -903,7 +922,10 @@ function AdicionarDialog({
     })),
   ];
   const qn = normaliza(q.trim());
-  const lista = qn ? todos.filter((s) => normaliza(s.descricao).includes(qn)).slice(0, 40) : [];
+  const termos = [qn, ...(SINONIMOS[qn] ?? [])];
+  const lista = qn
+    ? todos.filter((s) => termos.some((t) => normaliza(s.descricao).includes(t))).slice(0, 40)
+    : [];
   const pacotes = MODELOS.filter((m) => (amb ? m.para === "ambiente" : m.para === "obra"));
   const maxOrdem = todosItens.reduce((m, i) => Math.max(m, i.ordem), 0);
   const onde = amb?.nome ?? "Obra toda";
