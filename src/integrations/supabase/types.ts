@@ -195,6 +195,7 @@ export type Database = {
       evfs: {
         Row: {
           programa: Json | null
+          propostas_equipe: Json
           descricao_obra: string | null
           sugestoes_ignoradas: Json
           area_m2: number
@@ -214,6 +215,7 @@ export type Database = {
         }
         Insert: {
           programa?: Json | null
+          propostas_equipe?: Json
           descricao_obra?: string | null
           sugestoes_ignoradas?: Json
           area_m2?: number
@@ -233,6 +235,7 @@ export type Database = {
         }
         Update: {
           programa?: Json | null
+          propostas_equipe?: Json
           descricao_obra?: string | null
           sugestoes_ignoradas?: Json
           area_m2?: number
@@ -282,6 +285,7 @@ export type Database = {
       itens_evf: {
         Row: {
           origem_preco: string | null
+          equipe: string | null
           link: string | null
           base_item_id: string | null
           base_qtd: string | null
@@ -306,6 +310,7 @@ export type Database = {
         }
         Insert: {
           origem_preco?: string | null
+          equipe?: string | null
           link?: string | null
           base_item_id?: string | null
           base_qtd?: string | null
@@ -330,6 +335,7 @@ export type Database = {
         }
         Update: {
           origem_preco?: string | null
+          equipe?: string | null
           link?: string | null
           base_item_id?: string | null
           base_qtd?: string | null

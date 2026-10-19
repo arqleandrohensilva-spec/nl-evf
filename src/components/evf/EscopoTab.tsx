@@ -1,3 +1,4 @@
+import { EQUIPES, equipeDoItem, equipeSugerida } from "@/lib/equipes";
 import { useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
@@ -640,6 +641,18 @@ function ItemDetalhe({
               />
             </Campo>
           </div>
+          <Campo rotulo="Quem faz" dica="Define em qual equipe o serviço aparece na aba Equipes.">
+            <SelectCell
+              value={equipeDoItem(i)}
+              options={EQUIPES.map((e) => ({
+                value: e.id,
+                label: `${e.nome}${e.id === equipeSugerida(i) ? " (sugerido)" : ""}`,
+              }))}
+              label="Quem faz"
+              className="w-full"
+              onSave={(v) => upd({ equipe: v === equipeSugerida(i) ? null : v })}
+            />
+          </Campo>
           <div className="grid grid-cols-3 gap-3">
             <Campo rotulo="Código">
               <TextCell value={i.codigo} label="Código" onSave={(v) => upd({ codigo: v })} />

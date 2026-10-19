@@ -20,6 +20,7 @@ const evf = (tipo: string): Evf => ({
   sugestoes_ignoradas: [],
   descricao_obra: null,
   programa: null,
+  propostas_equipe: {},
 });
 
 const amb = (id: string, nome: string, c = 0, l = 0, pd = 2.6, vaos = 0): Ambiente => ({
@@ -58,6 +59,7 @@ const item = (descricao: string, extra: Partial<Item> = {}): Item => ({
   fator: 1,
   link: null,
   origem_preco: null,
+  equipe: null,
   ...extra,
 });
 

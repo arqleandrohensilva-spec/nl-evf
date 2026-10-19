@@ -140,6 +140,7 @@ describe("intervenções guiadas", () => {
           fator: 1,
           link: null,
           origem_preco: null,
+          equipe: null,
         },
       ],
     );

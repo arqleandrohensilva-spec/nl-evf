@@ -43,3 +43,7 @@ create or replace view public.bases_referencia with (security_invoker = true) as
 grant select on public.bases_referencia to anon;
 alter table public.configuracoes add column if not exists base_preco text;
 alter table public.itens_evf add column if not exists origem_preco text;
+
+-- Equipes: quem executa cada item (null = automático pela chave/capítulo) e propostas recebidas por equipe
+alter table public.itens_evf add column if not exists equipe text;
+alter table public.evfs add column if not exists propostas_equipe jsonb not null default '{}'::jsonb;

@@ -15,6 +15,7 @@ import { EvfFormDialog } from "@/components/evf/EvfForm";
 import { EscopoTab } from "@/components/evf/EscopoTab";
 import { CotacoesTab } from "@/components/evf/CotacoesTab";
 import { ResumoTab } from "@/components/evf/ResumoTab";
+import { EquipesTab } from "@/components/evf/EquipesTab";
 import { AbcTab } from "@/components/evf/AbcTab";
 import { AuditorTab } from "@/components/evf/AuditorTab";
 import { LevantamentoTab } from "@/components/evf/LevantamentoTab";
@@ -251,6 +252,7 @@ function Page() {
             ["materiais", "Materiais"],
             ["cotacoes", "3 · Preços e cotações"],
             ["resumo", "4 · Resumo"],
+            ["equipes", "Equipes"],
             ["abc", "Curva ABC"],
             ["auditor", `Auditor${nAlertas ? ` (${nAlertas})` : ""}`],
           ].map(([v, l]) => (
@@ -312,6 +314,9 @@ function Page() {
         </TabsContent>
         <TabsContent value="resumo" className="mt-4">
           <ResumoTab d={dv} />
+        </TabsContent>
+        <TabsContent value="equipes" className="mt-4">
+          <EquipesTab d={d} />
         </TabsContent>
         <TabsContent value="abc" className="mt-4">
           <AbcTab d={dv} />
