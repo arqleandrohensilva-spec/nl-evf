@@ -18,7 +18,7 @@ export interface Equipe {
 }
 
 export const EQUIPES: Equipe[] = [
-  { id: "pedreiro", nome: "Pedreiro", tipo: "mo" },
+  { id: "pedreiro", nome: "Pedreiro (obra, hidráulica e elétrica)", tipo: "mo" },
   { id: "encanador", nome: "Encanador", tipo: "mo" },
   { id: "eletricista", nome: "Eletricista", tipo: "mo" },
   { id: "gesseiro", nome: "Gesseiro / drywall", tipo: "mo" },
@@ -189,6 +189,13 @@ const CHAVE_EQUIPE: Record<string, string> = Object.fromEntries(
   Object.entries(POR_CHAVE).flatMap(([eq, chaves]) => chaves.map((c) => [c, eq])),
 );
 
+/**
+ * Na prática do escritório, o pedreiro faz também a hidráulica e a elétrica. Os serviços continuam
+ * classificados por especialidade (acima); aqui eles são juntados no pedreiro. Para contratar um
+ * eletricista ou encanador à parte, basta trocar "Quem faz" no item.
+ */
+const JUNTO_COM: Record<string, string> = { encanador: "pedreiro", eletricista: "pedreiro" };
+
 /** Equipe padrão de cada capítulo, para itens sem chave (item livre, catálogo). */
 const POR_CAPITULO: Record<number, string> = {
   1: "tecnicos",
@@ -220,7 +227,8 @@ const POR_CAPITULO: Record<number, string> = {
 
 /** Equipe sugerida pelo sistema (sem considerar a escolha manual). */
 export function equipeSugerida(i: Pick<Item, "chave" | "capitulo_codigo">): string {
-  return (i.chave && CHAVE_EQUIPE[i.chave]) || POR_CAPITULO[i.capitulo_codigo] || "outros";
+  const eq = (i.chave && CHAVE_EQUIPE[i.chave]) || POR_CAPITULO[i.capitulo_codigo] || "outros";
+  return JUNTO_COM[eq] ?? eq;
 }
 
 /** Equipe do item: a escolhida à mão ou a sugerida. */

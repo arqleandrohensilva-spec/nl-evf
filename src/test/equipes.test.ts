@@ -31,7 +31,11 @@ const base: Item = {
 describe("equipes", () => {
   it("sugere pela chave, cai no capítulo e respeita a escolha manual", () => {
     expect(equipeDoItem(base)).toBe("pedreiro");
-    expect(equipeDoItem({ ...base, chave: "ponto_tomada" })).toBe("eletricista");
+    expect(equipeDoItem({ ...base, chave: "ponto_tomada" })).toBe("pedreiro");
+    expect(equipeDoItem({ ...base, chave: "vaso", capitulo_codigo: 10 })).toBe("pedreiro");
+    expect(equipeDoItem({ ...base, chave: "ponto_tomada", equipe: "eletricista" })).toBe(
+      "eletricista",
+    );
     expect(equipeDoItem({ ...base, chave: null, capitulo_codigo: 11 })).toBe("pintor");
     expect(equipeDoItem({ ...base, equipe: "granilite" })).toBe("granilite");
   });

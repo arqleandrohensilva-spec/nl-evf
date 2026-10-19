@@ -48,11 +48,7 @@ export function EquipesTab({ d }: { d: EvfData }) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi
-          titulo="Mão de obra das equipes"
-          valor={fmtR(mo)}
-          nota="Pedreiro, encanador, eletricista, pintor…"
-        />
+        <Kpi titulo="Mão de obra das equipes" valor={fmtR(mo)} nota="Pedreiro, gesseiro, pintor…" />
         <Kpi titulo="Fornece e instala" valor={fmtR(forn)} nota="Marmoraria, marcenaria, vidros…" />
         <Kpi titulo="Compras, locações e taxas" valor={fmtR(comp)} nota="Sem equipe de obra" />
         <Kpi
