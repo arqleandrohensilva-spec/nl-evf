@@ -84,6 +84,13 @@ describe("lista de materiais", () => {
     expect(sala.some((x) => x.insumo === "chapa_drywall_ru")).toBe(false);
   });
 
+  it("embalagem: caixa de parafusos e galão de tinta para consumo pequeno", () => {
+    expect(compra("parafuso_chapa", 30)).toBe("30 un (1 caixa de 1000)");
+    expect(compra("tinta_acrilica", 1.44)).toBe("1 galão (galão 3,6 L)");
+    expect(compra("tinta_acrilica", 9)).toBe("3 galões (galão 3,6 L)");
+    expect(compra("tinta_acrilica", 30)).toBe("2 latas (lata 18 L)");
+  });
+
   it("telha só conta quando é cerâmica", () => {
     expect(consumoDoItem(item("Telhamento em telha de fibrocimento", "telhamento", 100))).toEqual(
       [],

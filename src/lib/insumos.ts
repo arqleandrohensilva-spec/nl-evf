@@ -11,6 +11,8 @@ export interface Insumo {
   un: string;
   /** Embalagem de compra (ex.: saco de 50 kg). Sem embalagem, compra-se na própria unidade. */
   emb?: { qtd: number; nome: string };
+  /** Embalagem menor, usada quando o consumo é pequeno (ex.: galão 3,6 L em vez de lata 18 L). */
+  embMenor?: { qtd: number; nome: string; ate: number };
 }
 
 export const INSUMOS: Record<string, Insumo> = {
@@ -53,10 +55,20 @@ export const INSUMOS: Record<string, Insumo> = {
     un: "kg",
     emb: { qtd: 18, nome: "balde 18 kg" },
   },
-  selador: { nome: "Selador acrílico", un: "L", emb: { qtd: 18, nome: "lata 18 L" } },
+  selador: {
+    nome: "Selador acrílico",
+    un: "L",
+    emb: { qtd: 18, nome: "lata 18 L" },
+    embMenor: { qtd: 3.6, nome: "galão 3,6 L", ate: 10.8 },
+  },
   massa_acrilica: { nome: "Massa acrílica", un: "kg", emb: { qtd: 25, nome: "balde 25 kg" } },
   massa_corrida: { nome: "Massa corrida PVA", un: "kg", emb: { qtd: 25, nome: "balde 25 kg" } },
-  tinta_acrilica: { nome: "Tinta acrílica", un: "L", emb: { qtd: 18, nome: "lata 18 L" } },
+  tinta_acrilica: {
+    nome: "Tinta acrílica",
+    un: "L",
+    emb: { qtd: 18, nome: "lata 18 L" },
+    embMenor: { qtd: 3.6, nome: "galão 3,6 L", ate: 10.8 },
+  },
   placa_gesso: { nome: "Placa de gesso 60×60 (forro)", un: "un" },
   chapa_drywall: { nome: "Chapa de drywall 1,20×1,80", un: "un" },
   perfil_drywall: {
@@ -409,8 +421,16 @@ export function compra(insumo: string, total: number): string {
   const ins = INSUMOS[insumo];
   if (!ins) return "";
   const fmt = (v: number, d = 2) => v.toLocaleString("pt-BR", { maximumFractionDigits: d });
-  if (ins.emb && ins.un === "un")
-    return `${Math.ceil(total)} un (${fmt(total / ins.emb.qtd, 1)} ${plural(ins.emb.nome)})`;
+  if (ins.emb && ins.un === "un") {
+    const k = Math.ceil(total / ins.emb.qtd - 1e-9);
+    const nome = ins.emb.nome.split(" ")[0] ?? ins.emb.nome;
+    return `${Math.ceil(total)} un (${k} ${k === 1 ? nome : plural(nome)} de ${ins.emb.qtd})`;
+  }
+  if (ins.embMenor && total <= ins.embMenor.ate) {
+    const k = Math.ceil(total / ins.embMenor.qtd - 1e-9);
+    const nome = ins.embMenor.nome.split(" ")[0] ?? ins.embMenor.nome;
+    return `${k} ${k === 1 ? nome : plural(nome)} (${ins.embMenor.nome})`;
+  }
   if (ins.emb) {
     const k = Math.ceil(total / ins.emb.qtd - 1e-9);
     const nome = ins.emb.nome.split(" ")[0] ?? ins.emb.nome;
@@ -425,6 +445,7 @@ export function compra(insumo: string, total: number): string {
 function plural(s: string) {
   if (s === "milheiro") return "milheiros";
   if (/m$/.test(s)) return `${s.slice(0, -1)}ns`;
+  if (/ão$/.test(s)) return `${s.slice(0, -2)}ões`;
   if (/[aeiou]$/.test(s)) return `${s}s`;
   if (/r$/.test(s)) return `${s}es`;
   return `${s}s`;
