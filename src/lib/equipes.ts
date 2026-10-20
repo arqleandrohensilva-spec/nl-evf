@@ -18,7 +18,11 @@ export interface Equipe {
 }
 
 export const EQUIPES: Equipe[] = [
-  { id: "pedreiro", nome: "Pedreiro (obra, hidráulica e elétrica)", tipo: "mo" },
+  {
+    id: "pedreiro",
+    nome: "Empreiteira (obra, hidráulica, elétrica, drywall e pintura)",
+    tipo: "mo",
+  },
   { id: "encanador", nome: "Encanador", tipo: "mo" },
   { id: "eletricista", nome: "Eletricista", tipo: "mo" },
   { id: "gesseiro", nome: "Gesseiro / drywall", tipo: "mo" },
@@ -190,11 +194,36 @@ const CHAVE_EQUIPE: Record<string, string> = Object.fromEntries(
 );
 
 /**
- * Na prática do escritório, o pedreiro faz também a hidráulica e a elétrica. Os serviços continuam
- * classificados por especialidade (acima); aqui eles são juntados no pedreiro. Para contratar um
- * eletricista ou encanador à parte, basta trocar "Quem faz" no item.
+ * Na prática do escritório, uma empreiteira faz toda a mão de obra: obra civil, hidráulica,
+ * elétrica, drywall, pintura e instalação de portas. Os serviços continuam classificados por
+ * especialidade (acima); aqui eles são juntados na empreiteira ("pedreiro"). Para contratar um
+ * especialista à parte, basta trocar "Quem faz" no item.
  */
-const JUNTO_COM: Record<string, string> = { encanador: "pedreiro", eletricista: "pedreiro" };
+const JUNTO_COM: Record<string, string> = {
+  encanador: "pedreiro",
+  eletricista: "pedreiro",
+  gesseiro: "pedreiro",
+  pintor: "pedreiro",
+  carpinteiro: "pedreiro",
+  telhadista: "pedreiro",
+};
+
+/** Id da equipe que concentra a mão de obra da obra (valor global, sem preço por serviço). */
+export const EMPREITEIRA = "pedreiro";
+
+/** O item entra no valor global da empreiteira (a M.O. dele não é lançada à parte). */
+export function ehEmpreiteira(i: Pick<Item, "chave" | "capitulo_codigo" | "equipe">): boolean {
+  return equipeDoItem(i) === EMPREITEIRA;
+}
+
+/**
+ * Item ainda sem preço. Serviço da empreiteira nunca conta: a mão de obra vem do valor global e
+ * muitos serviços (remoções, instalações) não têm material.
+ */
+export function semPrecoItem(i: Item): boolean {
+  if (ehEmpreiteira(i) && i.tipo_preco !== "cotacao") return false;
+  return Number(i.material_unit) + Number(i.mo_unit) === 0;
+}
 
 /** Equipe padrão de cada capítulo, para itens sem chave (item livre, catálogo). */
 const POR_CAPITULO: Record<number, string> = {

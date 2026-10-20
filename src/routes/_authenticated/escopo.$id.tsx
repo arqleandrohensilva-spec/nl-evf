@@ -26,7 +26,10 @@ function Page() {
   const d = useEvfData(id);
   const { evf, config, ambientes } = d;
   const [comoFaz, setComoFaz] = useState(true);
-  const linha = useMemo(() => porEquipe(d.itens).find((l) => l.equipe.id === eq), [d.itens, eq]);
+  const todas = useMemo(() => porEquipe(d.itens), [d.itens]);
+  const linha = todas.find((l) => l.equipe.id === eq);
+  /** O que outras equipes fazem: entra como "fora do escopo" para a empreiteira saber. */
+  const fora = todas.filter((l) => l.equipe.id !== eq && l.equipe.tipo !== "compra");
   const grupos = useMemo(() => {
     const ordem = [null, ...ambientes.map((a) => a.id)];
     const map = new Map<string | null, Item[]>();
@@ -159,6 +162,27 @@ function Page() {
             </section>
           ))
         )}
+
+        {fora.length ? (
+          <section className="break-inside-avoid space-y-2">
+            <h2 className="border-b pb-1 text-base font-semibold">Fora do escopo</h2>
+            <p className="text-muted-foreground">
+              Contratados à parte. A obra precisa estar pronta para recebê-los, e o calendário é
+              combinado com eles.
+            </p>
+            <ul className="list-disc space-y-0.5 pl-5">
+              {fora.map((l) => (
+                <li key={l.equipe.id}>
+                  <b>{l.equipe.nome}:</b>{" "}
+                  {l.itens
+                    .map((i) => i.descricao.split(" – ")[0])
+                    .filter((v, k, a) => a.indexOf(v) === k)
+                    .join("; ")}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <section className="break-inside-avoid space-y-2">
           <h2 className="border-b pb-1 text-base font-semibold">Condições gerais</h2>

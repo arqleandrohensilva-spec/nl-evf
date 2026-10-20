@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Item } from "@/lib/calc";
 import { itemTotais } from "@/lib/calc";
-import { equipeDoItem, porEquipe, ratearProposta, textoParaEquipe } from "@/lib/equipes";
+import {
+  equipeDoItem,
+  porEquipe,
+  ratearProposta,
+  semPrecoItem,
+  textoParaEquipe,
+} from "@/lib/equipes";
 
 const base: Item = {
   id: "1",
@@ -37,7 +43,8 @@ describe("equipes", () => {
     expect(equipeDoItem({ ...base, chave: "ponto_tomada", equipe: "eletricista" })).toBe(
       "eletricista",
     );
-    expect(equipeDoItem({ ...base, chave: null, capitulo_codigo: 11 })).toBe("pintor");
+    expect(equipeDoItem({ ...base, chave: null, capitulo_codigo: 11 })).toBe("pedreiro");
+    expect(equipeDoItem({ ...base, chave: null, capitulo_codigo: 16 })).toBe("limpeza");
     expect(equipeDoItem({ ...base, equipe: "granilite" })).toBe("granilite");
   });
 
@@ -81,5 +88,11 @@ describe("equipes", () => {
   it("pede valor global para equipe de mão de obra", () => {
     const t = textoParaEquipe(porEquipe([base])[0]!, [], { nome: "Obra" });
     expect(t).toContain("valor global");
+  });
+  it("serviço da empreiteira não fica 'sem preço' (a M.O. vem do valor global)", () => {
+    const zero = { ...base, material_unit: 0, mo_unit: 0 };
+    expect(semPrecoItem(zero)).toBe(false);
+    expect(semPrecoItem({ ...zero, tipo_preco: "cotacao" })).toBe(true);
+    expect(semPrecoItem({ ...zero, equipe: "marmorista" })).toBe(true);
   });
 });

@@ -4,13 +4,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { itemTotais, sortItens, valorCotacao, type Cotacao, type Item } from "@/lib/calc";
 import { atualizarPrecos } from "@/lib/actions";
-import { EQUIPE, equipeDoItem } from "@/lib/equipes";
+import { EQUIPE, ehEmpreiteira, equipeDoItem, semPrecoItem } from "@/lib/equipes";
 import { agruparPorFase } from "@/lib/fases";
 import { fmtR } from "@/lib/format";
 import { useReferencia } from "@/lib/precos";
 import { dividir } from "@/lib/referencia";
 import { cn } from "@/lib/utils";
 import { LinkCell, NumCell, TextCell } from "./cells";
+import { EmpreiteiraBloco } from "./EmpreiteiraBloco";
 import type { EvfData } from "./useEvfData";
 
 const CRITERIOS = [
@@ -19,12 +20,13 @@ const CRITERIOS = [
   { v: "maior", l: "Maior" },
 ];
 
-const semPreco = (i: Item) => Number(i.material_unit) + Number(i.mo_unit) === 0;
+const semPreco = semPrecoItem;
 
 /**
  * Preços e cotações: o único lugar onde se lançam valores.
  * - Comprados de fornecedor (tipo cotação): uma ou mais cotações → material; a mão de obra ao lado.
- * - Serviços (composição e verba): material e mão de obra por unidade do item.
+ * - Serviços (composição e verba): material por unidade; a mão de obra da empreiteira entra como
+ *   um valor global (bloco próprio), e a de outros prestadores, por unidade do item.
  */
 export function CotacoesTab({ d, foco }: { d: EvfData; foco?: string | null }) {
   const { itens, cotacoes, mItem, mCot, ambientes } = d;
@@ -321,12 +323,17 @@ export function CotacoesTab({ d, foco }: { d: EvfData; foco?: string | null }) {
         ) : null}
       </div>
 
-      <h2 className="pt-4 text-base font-semibold">
+      <div className="pt-4">
+        <EmpreiteiraBloco d={d} />
+      </div>
+
+      <h2 className="pt-2 text-base font-semibold">
         Serviços <span className="font-normal text-muted-foreground">({servicos.length})</span>
       </h2>
       <p className="-mt-2 text-sm text-muted-foreground">
-        Composição e verba: digite o material e a mão de obra por unidade, ou preencha pela
-        referência (SINAPI) ou pelo catálogo do escritório.
+        Composição e verba: digite o material por unidade. A mão de obra da empreiteira não tem
+        preço por serviço: vem do valor global, no bloco acima (nesses itens o total mostra só o
+        material).
       </p>
       {servicos.length ? (
         <div className="card overflow-x-auto">
@@ -440,13 +447,19 @@ function FaseServicos({
               />
             </td>
             <td>
-              <NumCell
-                value={Number(i.mo_unit)}
-                label={`Mão de obra de ${i.descricao}`}
-                onSave={(v) => mItem.update.mutate({ id: i.id, mo_unit: v })}
-              />
+              {ehEmpreiteira(i) ? (
+                <span className="block text-right text-xs text-muted-foreground">valor global</span>
+              ) : (
+                <NumCell
+                  value={Number(i.mo_unit)}
+                  label={`Mão de obra de ${i.descricao}`}
+                  onSave={(v) => mItem.update.mutate({ id: i.id, mo_unit: v })}
+                />
+              )}
             </td>
-            <td className="num text-right font-semibold">{fmtR(itemTotais(i).total)}</td>
+            <td className="num text-right font-semibold">
+              {fmtR(ehEmpreiteira(i) ? itemTotais(i).mat : itemTotais(i).total)}
+            </td>
             <td className="text-right">
               <button
                 className="whitespace-nowrap text-xs text-primary underline"
@@ -469,7 +482,7 @@ function DicaGlobal({ i }: { i: Item }) {
   if (eq?.tipo !== "mo") return null;
   return (
     <span className="mt-0.5 block max-w-[11rem] text-[11px] leading-tight">
-      Instalação no valor global do {eq.nome.split(" (")[0]!.toLowerCase()} (aba Equipes)
+      Instalação no valor global da {eq.nome.split(" (")[0]!.toLowerCase()}
     </span>
   );
 }

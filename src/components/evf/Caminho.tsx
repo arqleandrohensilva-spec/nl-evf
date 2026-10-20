@@ -1,3 +1,4 @@
+import { semPrecoItem } from "@/lib/equipes";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EvfData } from "./useEvfData";
@@ -34,7 +35,7 @@ export function Caminho({
     })),
   ];
   const faltaEscopo = locais.filter((l) => !l.tem);
-  const semPreco = todosItens.filter((i) => Number(i.material_unit) + Number(i.mo_unit) === 0);
+  const semPreco = todosItens.filter(semPrecoItem);
   const target = Number(evf.target) || 0;
 
   const passos: Passo[] = [

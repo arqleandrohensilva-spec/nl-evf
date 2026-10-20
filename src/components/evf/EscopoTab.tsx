@@ -1,3 +1,4 @@
+import { semPrecoItem } from "@/lib/equipes";
 import { EQUIPES, equipeDoItem, equipeSugerida } from "@/lib/equipes";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -451,16 +452,15 @@ function FaseLinhas({
         const t = itemTotais(i);
         const unit = Number(i.material_unit) + Number(i.mo_unit);
         const ligado = Boolean(i.base_qtd && i.base_qtd !== "manual");
-        const situacao =
-          unit === 0
-            ? { txt: "sem preço", alerta: true }
-            : i.etapa === "Etapa futura"
-              ? { txt: "etapa futura", alerta: false }
-              : i.origem_preco &&
-                  i.origem_preco !== "Catálogo do escritório" &&
-                  i.origem_preco !== "Cotação"
-                ? { txt: `ref. ${i.origem_preco.split(" ")[0]}`, alerta: false }
-                : null;
+        const situacao = semPrecoItem(i)
+          ? { txt: "sem preço", alerta: true }
+          : i.etapa === "Etapa futura"
+            ? { txt: "etapa futura", alerta: false }
+            : i.origem_preco &&
+                i.origem_preco !== "Catálogo do escritório" &&
+                i.origem_preco !== "Cotação"
+              ? { txt: `ref. ${i.origem_preco.split(" ")[0]}`, alerta: false }
+              : null;
         return (
           <tr key={i.id} className={sel.has(i.id) ? "bg-warning-soft/60" : undefined}>
             <td>
