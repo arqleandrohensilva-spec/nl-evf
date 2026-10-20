@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { itemTotais, sortItens, valorCotacao, type Cotacao, type Item } from "@/lib/calc";
 import { atualizarPrecos } from "@/lib/actions";
+import { EQUIPE, equipeDoItem } from "@/lib/equipes";
 import { agruparPorFase } from "@/lib/fases";
 import { fmtR } from "@/lib/format";
 import { useReferencia } from "@/lib/precos";
@@ -201,6 +202,7 @@ export function CotacoesTab({ d, foco }: { d: EvfData; foco?: string | null }) {
                       className="w-28 border-border"
                       onSave={(v) => mItem.update.mutate({ id: i.id, mo_unit: v })}
                     />
+                    <DicaGlobal i={i} />
                   </label>
                   <div className="text-right">
                     <div className="text-xs text-muted-foreground">Total</div>
@@ -465,5 +467,16 @@ function FaseServicos({
         );
       })}
     </>
+  );
+}
+
+/** A instalação de quem só cobra mão de obra entra no valor global da equipe (aba Equipes). */
+function DicaGlobal({ i }: { i: Item }) {
+  const eq = EQUIPE[equipeDoItem(i)];
+  if (eq?.tipo !== "mo") return null;
+  return (
+    <span className="mt-0.5 block max-w-[11rem] text-[11px] leading-tight">
+      Instalação no valor global do {eq.nome.split(" (")[0]!.toLowerCase()} (aba Equipes)
+    </span>
   );
 }

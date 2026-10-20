@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Item } from "@/lib/calc";
-import { equipeDoItem, porEquipe, textoParaEquipe } from "@/lib/equipes";
+import { itemTotais } from "@/lib/calc";
+import { equipeDoItem, porEquipe, ratearProposta, textoParaEquipe } from "@/lib/equipes";
 
 const base: Item = {
   id: "1",
@@ -60,5 +61,25 @@ describe("equipes", () => {
     const txt = textoParaEquipe(linhas[0]!, [], { nome: "Casa X" });
     expect(txt).toMatch(/mão de obra/);
     expect(txt).toMatch(/Revestimento de piso – 10 m²/);
+  });
+  it("rateia o valor global da proposta pela M.O. estimada e volta à estimativa", () => {
+    const itens: Item[] = [
+      base,
+      { ...base, id: "2", codigo: "9.2", quantidade: 5, mo_unit: 100, perda_pct: 10 },
+      { ...base, id: "3", codigo: "9.3", quantidade: 2, mo_unit: 0 },
+    ];
+    const l = porEquipe(itens)[0]!;
+    expect(l.previsto).toBeCloseTo(500 + 550, 2);
+    const novos = ratearProposta(l, 2100);
+    const aplicados = itens.map((i) => ({ ...i, ...novos.find((n) => n.id === i.id) }));
+    const soma = aplicados.reduce((s, i) => s + itemTotais(i).mo, 0);
+    expect(soma).toBeCloseTo(2100, 1);
+    expect(aplicados[2]!.mo_unit).toBe(0);
+    const volta = ratearProposta(porEquipe(aplicados)[0]!, 1050);
+    expect(volta.find((n) => n.id === "1")!.mo_unit).toBeCloseTo(50, 3);
+  });
+  it("pede valor global para equipe de mão de obra", () => {
+    const t = textoParaEquipe(porEquipe([base])[0]!, [], { nome: "Obra" });
+    expect(t).toContain("valor global");
   });
 });

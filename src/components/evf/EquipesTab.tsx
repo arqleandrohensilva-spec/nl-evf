@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
-import { Check, ChevronDown, Copy, HardHat } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Check, ChevronDown, Copy, FileText, HardHat, Undo2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { itemTotais } from "@/lib/calc";
 import {
+  chaveEstimado,
   EQUIPES,
   equipeDoItem,
   equipeSugerida,
   porEquipe,
+  ratearProposta,
   textoParaEquipe,
   type LinhaEquipe,
 } from "@/lib/equipes";
@@ -36,13 +39,37 @@ export function EquipesTab({ d }: { d: EvfData }) {
     else delete novo[id];
     mEvf.update.mutate({ id: evf.id, propostas_equipe: novo });
   };
+  /** Estimativa do EVF antes de aplicar qualquer proposta (é a base da comparação). */
+  const estimado = (l: LinhaEquipe) => propostas[chaveEstimado(l.equipe.id)] ?? l.previsto;
+  /** Grava o valor global nos itens da equipe (rateio pela M.O. estimada). */
+  const aplicar = async (l: LinhaEquipe, valor: number, voltar = false) => {
+    const novos = ratearProposta(l, valor);
+    if (!novos.length) {
+      toast.error("Nenhum serviço desta equipe tem quantidade para receber o valor.");
+      return;
+    }
+    try {
+      await Promise.all(novos.map((u) => d.mItem.update.mutateAsync(u)));
+      const novo = { ...propostas };
+      if (voltar) delete novo[chaveEstimado(l.equipe.id)];
+      else novo[chaveEstimado(l.equipe.id)] = estimado(l);
+      mEvf.update.mutate({ id: evf.id, propostas_equipe: novo });
+      toast.success(
+        voltar
+          ? "Mão de obra voltou à estimativa do EVF."
+          : `Proposta de ${fmtR(valor)} aplicada: a M.O. de ${novos.length} serviços foi ajustada.`,
+      );
+    } catch {
+      toast.error("Não foi possível aplicar. Tente de novo.");
+    }
+  };
   const soma = (f: (l: LinhaEquipe) => boolean) =>
     linhas.filter(f).reduce((s, l) => s + l.previsto, 0);
   const mo = soma((l) => l.equipe.tipo === "mo");
   const forn = soma((l) => l.equipe.tipo === "fornecedor");
   const comp = soma((l) => l.equipe.tipo === "compra");
   const comProposta = linhas.filter((l) => propostas[l.equipe.id]);
-  const prevComProposta = comProposta.reduce((s, l) => s + l.previsto, 0);
+  const prevComProposta = comProposta.reduce((s, l) => s + estimado(l), 0);
   const recebido = comProposta.reduce((s, l) => s + (propostas[l.equipe.id] ?? 0), 0);
 
   return (
@@ -64,10 +91,11 @@ export function EquipesTab({ d }: { d: EvfData }) {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Cada serviço já vem com a equipe que costuma fazer. Abra uma equipe para ver a lista,{" "}
-        <strong>copiar o pedido de proposta</strong> e mandar pelo WhatsApp. Quando a proposta
-        chegar, digite o valor e compare com o previsto. Para trocar quem faz um serviço, mude a
-        equipe na linha. Itens de etapa futura ficam de fora.
+        Cada serviço já vem com a equipe que costuma fazer. Abra uma equipe para{" "}
+        <strong>imprimir o escopo</strong> (tudo o que ela vai fazer, sem valores) ou copiar o
+        pedido para o WhatsApp. O pedreiro e as demais equipes de mão de obra devolvem{" "}
+        <strong>um valor global</strong>: digite em “Proposta recebida” e use “Aplicar ao EVF” para
+        o total da obra passar a usar esse valor. Itens de etapa futura ficam de fora.
       </p>
 
       <div className="overflow-x-auto rounded-lg border bg-card">
@@ -84,7 +112,8 @@ export function EquipesTab({ d }: { d: EvfData }) {
           <tbody>
             {linhas.map((l) => {
               const p = propostas[l.equipe.id] ?? 0;
-              const dif = p - l.previsto;
+              const est = estimado(l);
+              const dif = p - est;
               const aberto = aberta === l.equipe.id;
               return (
                 <EquipeLinhas
@@ -95,6 +124,17 @@ export function EquipesTab({ d }: { d: EvfData }) {
                   onToggle={() => setAberta(aberto ? null : l.equipe.id)}
                   proposta={p}
                   dif={dif}
+                  estimado={est}
+                  aplicada={propostas[chaveEstimado(l.equipe.id)] !== undefined}
+                  onAplicar={() => {
+                    if (
+                      window.confirm(
+                        `Aplicar a proposta de ${fmtR(p)} ao EVF?\n\nA mão de obra dos ${l.itens.length} serviços de ${l.equipe.nome} é ajustada na proporção da estimativa, para somar exatamente esse valor. Dá para voltar à estimativa depois.`,
+                      )
+                    )
+                      void aplicar(l, p);
+                  }}
+                  onVoltar={() => void aplicar(l, est, true)}
                   onProposta={(v) => salvarProposta(l.equipe.id, v)}
                   texto={() =>
                     textoParaEquipe(l, ambientes, { nome: evf.obra, local: evf.cidade_uf })
@@ -116,6 +156,10 @@ function EquipeLinhas({
   onToggle,
   proposta,
   dif,
+  estimado,
+  aplicada,
+  onAplicar,
+  onVoltar,
   onProposta,
   texto,
 }: {
@@ -125,6 +169,10 @@ function EquipeLinhas({
   onToggle: () => void;
   proposta: number;
   dif: number;
+  estimado: number;
+  aplicada: boolean;
+  onAplicar: () => void;
+  onVoltar: () => void;
   onProposta: (v: number) => void;
   texto: () => string;
 }) {
@@ -166,7 +214,14 @@ function EquipeLinhas({
             <span className="ml-2 text-xs text-warning">{semPreco} sem preço</span>
           ) : null}
         </td>
-        <td className="num px-3 py-2 text-right font-medium">{fmtR(l.previsto)}</td>
+        <td className="num px-3 py-2 text-right font-medium">
+          {fmtR(l.previsto)}
+          {aplicada ? (
+            <div className="text-xs font-normal text-muted-foreground">
+              proposta aplicada · estimativa {fmtR(estimado)}
+            </div>
+          ) : null}
+        </td>
         <td className="px-3 py-2 text-right">
           {l.equipe.tipo === "compra" ? (
             <span className="text-xs text-muted-foreground">—</span>
@@ -184,7 +239,7 @@ function EquipeLinhas({
           }`}
         >
           {proposta
-            ? `${dif > 0 ? "+" : ""}${fmtR(dif)}${l.previsto ? ` (${fmtPct((dif / l.previsto) * 100, 0)})` : ""}`
+            ? `${dif > 0 ? "+" : ""}${fmtR(dif)}${estimado ? ` (${fmtPct((dif / estimado) * 100, 0)})` : ""}`
             : "—"}
         </td>
       </tr>
@@ -194,16 +249,54 @@ function EquipeLinhas({
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">
                 {ehMo
-                  ? "Valores de mão de obra; o material é comprado pela obra."
+                  ? "M.O. por serviço = estimativa (ou rateio da proposta global); o material é comprado pela obra."
                   : l.equipe.tipo === "fornecedor"
                     ? "Fornecimento e instalação (material + mão de obra)."
                     : "Compras e contratações sem equipe de obra."}
               </span>
-              <Button size="sm" variant="outline" className="h-9 bg-card" onClick={copiar}>
-                {copiado ? <Check className="size-4" /> : <Copy className="size-4" />}
-                Copiar pedido de proposta
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {l.equipe.tipo !== "compra" ? (
+                  <Button asChild size="sm" variant="outline" className="h-9 bg-card">
+                    <Link to="/escopo/$id" params={{ id: d.evf!.id }} search={{ eq: l.equipe.id }}>
+                      <FileText className="size-4" /> Escopo para imprimir / PDF
+                    </Link>
+                  </Button>
+                ) : null}
+                <Button size="sm" variant="outline" className="h-9 bg-card" onClick={copiar}>
+                  {copiado ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  Copiar pedido de proposta
+                </Button>
+              </div>
             </div>
+            {ehMo ? (
+              <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md border bg-card px-3 py-2 text-sm">
+                {proposta > 0 && Math.abs(proposta - l.previsto) >= 0.01 ? (
+                  <>
+                    <span>
+                      Proposta global de <strong>{fmtR(proposta)}</strong>. Ao aplicar, a M.O. de
+                      cada serviço é ajustada na proporção da estimativa e o EVF soma esse valor.
+                    </span>
+                    <Button size="sm" className="h-9" onClick={onAplicar}>
+                      <Wand2 className="size-4" /> Aplicar ao EVF
+                    </Button>
+                  </>
+                ) : proposta > 0 ? (
+                  <span className="text-primary">
+                    <Check className="mr-1 inline size-4" />A M.O. desta equipe no EVF já é a
+                    proposta de {fmtR(proposta)}.
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    Quando receber o valor global, digite em “Proposta recebida” e aplique ao EVF.
+                  </span>
+                )}
+                {aplicada ? (
+                  <Button size="sm" variant="ghost" className="ml-auto h-9" onClick={onVoltar}>
+                    <Undo2 className="size-4" /> Voltar à estimativa ({fmtR(estimado)})
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
             <table className="w-full text-sm">
               <thead className="text-left text-xs text-muted-foreground">
                 <tr>

@@ -267,6 +267,27 @@ export function porEquipe(itens: Item[]): LinhaEquipe[] {
   return EQUIPES.flatMap((e) => (map.has(e.id) ? [map.get(e.id)!] : []));
 }
 
+/** Chave, em evfs.propostas_equipe, onde fica a estimativa original da equipe antes de aplicar a proposta. */
+export const chaveEstimado = (id: string) => `${id}#estimado`;
+
+/**
+ * Distribui o valor global da proposta de uma equipe de mão de obra pelos itens dela, na proporção
+ * da M.O. estimada de cada item (sem estimativa nenhuma, divide igualmente). Assim o EVF passa a
+ * somar exatamente o valor da proposta, e cada serviço continua com um custo para a Curva ABC.
+ * Como é uma escala proporcional, aplicar de novo o valor estimado volta aos números originais.
+ */
+export function ratearProposta(l: LinhaEquipe, valor: number): { id: string; mo_unit: number }[] {
+  const itens = l.itens.filter((i) => itemTotais({ ...i, mo_unit: 1 }).mo > 0);
+  if (!itens.length) return [];
+  const pesos = itens.map((i) => itemTotais(i).mo);
+  const soma = pesos.reduce((s, p) => s + p, 0);
+  return itens.map((i, k) => {
+    const parte = soma > 0 ? (valor * pesos[k]!) / soma : valor / itens.length;
+    const base = itemTotais({ ...i, mo_unit: 1 }).mo;
+    return { id: i.id, mo_unit: Math.round((parte / base) * 10000) / 10000 };
+  });
+}
+
 const num = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
 /** Texto pronto para mandar no WhatsApp ou e-mail pedindo a proposta da equipe. */
@@ -282,7 +303,7 @@ export function textoParaEquipe(
   }
   const pedido =
     l.equipe.tipo === "mo"
-      ? "Pedido de proposta de *mão de obra* (o material é fornecido pela obra)."
+      ? "Pedido de proposta de *mão de obra* para o conjunto dos serviços abaixo (o material é fornecido pela obra)."
       : l.equipe.tipo === "fornecedor"
         ? "Pedido de proposta de *fornecimento e instalação*."
         : "Lista de compras e contratações.";
@@ -297,7 +318,12 @@ export function textoParaEquipe(
       linhas.push(`• ${i.descricao} – ${num(Number(i.quantidade) || 0)} ${i.unidade}`);
     linhas.push("");
   }
-  if (l.equipe.tipo !== "compra")
+  if (l.equipe.tipo === "mo")
+    linhas.push(
+      "Por favor, informe o *valor global* da mão de obra de todos os serviços, o prazo de execução e a forma de pagamento.",
+      "Fase de estudo de viabilidade: a proposta ajuda a decidir o projeto.",
+    );
+  else if (l.equipe.tipo !== "compra")
     linhas.push(
       "Por favor, informe o valor por item (ou global), o prazo de execução e a forma de pagamento.",
       "Fase de estudo de viabilidade: a proposta ajuda a decidir o projeto.",
