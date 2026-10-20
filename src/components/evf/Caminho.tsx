@@ -20,7 +20,7 @@ export function Caminho({
   aba: string;
   setAba: (v: string) => void;
 }) {
-  const { evf, ambientes, todosItens, cotacoes } = d;
+  const { evf, ambientes, todosItens } = d;
   if (!evf) return null;
   const comMedidas = ambientes.filter((a) => Number(a.comprimento) > 0 && Number(a.largura) > 0);
   const locais = [
@@ -35,11 +35,6 @@ export function Caminho({
   ];
   const faltaEscopo = locais.filter((l) => !l.tem);
   const semPreco = todosItens.filter((i) => Number(i.material_unit) + Number(i.mo_unit) === 0);
-  const cotar = todosItens.filter(
-    (i) =>
-      i.tipo_preco === "cotacao" &&
-      cotacoes.filter((c) => c.item_id === i.id && Number(c.valor) > 0).length < 3,
-  );
   const target = Number(evf.target) || 0;
 
   const passos: Passo[] = [
@@ -71,14 +66,12 @@ export function Caminho({
       n: 3,
       aba: "cotacoes",
       titulo: "Preços e cotações",
-      feito: todosItens.length > 0 && !semPreco.length && !cotar.length,
+      feito: todosItens.length > 0 && !semPreco.length,
       status: !todosItens.length
         ? "Depois do escopo"
         : semPreco.length
           ? `${semPreco.length} ${semPreco.length === 1 ? "serviço sem preço" : "serviços sem preço"}`
-          : cotar.length
-            ? `${cotar.length} com menos de 3 cotações`
-            : "Todos com preço",
+          : "Todos com preço",
     },
     {
       n: 4,

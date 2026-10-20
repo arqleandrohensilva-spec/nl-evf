@@ -451,19 +451,16 @@ function FaseLinhas({
         const t = itemTotais(i);
         const unit = Number(i.material_unit) + Number(i.mo_unit);
         const ligado = Boolean(i.base_qtd && i.base_qtd !== "manual");
-        const cots = nCot(i.id);
         const situacao =
           unit === 0
             ? { txt: "sem preço", alerta: true }
-            : i.tipo_preco === "cotacao" && cots < 3
-              ? { txt: `cotar (${cots}/3)`, alerta: true }
-              : i.etapa === "Etapa futura"
-                ? { txt: "etapa futura", alerta: false }
-                : i.origem_preco &&
-                    i.origem_preco !== "Catálogo do escritório" &&
-                    i.origem_preco !== "Cotação"
-                  ? { txt: `ref. ${i.origem_preco.split(" ")[0]}`, alerta: false }
-                  : null;
+            : i.etapa === "Etapa futura"
+              ? { txt: "etapa futura", alerta: false }
+              : i.origem_preco &&
+                  i.origem_preco !== "Catálogo do escritório" &&
+                  i.origem_preco !== "Cotação"
+                ? { txt: `ref. ${i.origem_preco.split(" ")[0]}`, alerta: false }
+                : null;
         return (
           <tr key={i.id} className={sel.has(i.id) ? "bg-warning-soft/60" : undefined}>
             <td>

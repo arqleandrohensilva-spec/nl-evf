@@ -23,7 +23,7 @@ const semPreco = (i: Item) => Number(i.material_unit) + Number(i.mo_unit) === 0;
 
 /**
  * Preços e cotações: o único lugar onde se lançam valores.
- * - Comprados de fornecedor (tipo cotação): 3 cotações → material; a mão de obra ao lado.
+ * - Comprados de fornecedor (tipo cotação): uma ou mais cotações → material; a mão de obra ao lado.
  * - Serviços (composição e verba): material e mão de obra por unidade do item.
  */
 export function CotacoesTab({ d, foco }: { d: EvfData; foco?: string | null }) {
@@ -31,12 +31,13 @@ export function CotacoesTab({ d, foco }: { d: EvfData; foco?: string | null }) {
   const [soFalta, setSoFalta] = useState(false);
   const referencia = useReferencia().data;
   const todos = useMemo(() => sortItens(itens), [itens]);
-  const n3 = (i: Item) => cotacoes.filter((c) => c.item_id === i.id && Number(c.valor) > 0).length;
-  const falta = (i: Item) => semPreco(i) || (i.tipo_preco === "cotacao" && n3(i) < 3);
+  const nCot = (i: Item) =>
+    cotacoes.filter((c) => c.item_id === i.id && Number(c.valor) > 0).length;
+  const falta = (i: Item) => semPreco(i);
   const cotados = todos.filter((i) => i.tipo_preco === "cotacao" && (!soFalta || falta(i)));
   const servicos = todos.filter((i) => i.tipo_preco !== "cotacao" && (!soFalta || falta(i)));
   const nSemPreco = todos.filter(semPreco).length;
-  const com3 = todos.filter((i) => i.tipo_preco === "cotacao" && n3(i) >= 3).length;
+  const comCot = todos.filter((i) => i.tipo_preco === "cotacao" && nCot(i) > 0).length;
   const nCotados = todos.filter((i) => i.tipo_preco === "cotacao").length;
   const nomeAmb = (id: string | null) => ambientes.find((a) => a.id === id)?.nome ?? "Obra toda";
   const preenchiveis = todos.filter((i) => semPreco(i) && i.chave && referencia?.has(i.chave));
@@ -81,18 +82,14 @@ export function CotacoesTab({ d, foco }: { d: EvfData; foco?: string | null }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Kpi titulo="Itens com preço" valor={`${todos.length - nSemPreco} de ${todos.length}`} />
-        <Kpi
-          titulo="Cotados com 3 cotações"
-          valor={`${com3} de ${nCotados}`}
-          alerta={com3 < nCotados}
-        />
+        <Kpi titulo="Comprados com cotação" valor={`${comCot} de ${nCotados}`} />
         <Kpi titulo="Sem preço" valor={String(nSemPreco)} alerta={nSemPreco > 0} />
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <p className="min-w-[18rem] flex-1 text-sm text-muted-foreground">
           Todos os valores são <b>por unidade do item</b> (R$ por m², por un…); o total é quantidade
-          × (material + mão de obra). Itens comprados de fornecedor levam 3 cotações; serviços levam
-          material e mão de obra direto.
+          × (material + mão de obra). Itens comprados de fornecedor levam uma ou mais cotações (com
+          várias, escolha média, menor ou maior); serviços levam material e mão de obra direto.
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -149,15 +146,11 @@ export function CotacoesTab({ d, foco }: { d: EvfData; foco?: string | null }) {
                       {nomeAmb(i.ambiente_id)} · {Number(i.quantidade).toLocaleString("pt-BR")}{" "}
                       {i.unidade}
                     </span>
-                    {vals.length < 3 ? (
-                      <span className="rounded bg-warning-soft px-2 py-0.5 font-medium text-warning">
-                        Só {vals.length} cotação{vals.length === 1 ? "" : "ões"}
+                    {vals.length ? (
+                      <span className="rounded bg-muted px-2 py-0.5 text-muted-foreground">
+                        {vals.length} {vals.length === 1 ? "cotação" : "cotações"}
                       </span>
-                    ) : (
-                      <span className="rounded bg-primary-soft px-2 py-0.5 font-medium text-primary">
-                        3 cotações
-                      </span>
-                    )}
+                    ) : null}
                     {spread >= 30 ? (
                       <span className="rounded bg-warning-soft px-2 py-0.5 font-medium text-warning">
                         Diferença de {Math.round(spread)}% entre propostas
@@ -457,7 +450,7 @@ function FaseServicos({
             <td className="text-right">
               <button
                 className="whitespace-nowrap text-xs text-primary underline"
-                title="Passa a pedir 3 cotações de fornecedor (vai para “Comprados de fornecedor”)"
+                title="Passa a ser comprado de fornecedor, com cotações (vai para “Comprados de fornecedor”)"
                 onClick={() => mItem.update.mutate({ id: i.id, tipo_preco: "cotacao" })}
               >
                 pedir cotação

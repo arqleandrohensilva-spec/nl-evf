@@ -304,7 +304,7 @@ export function auditar(evf: Evf, itens: Item[], caps: Capitulo[], cotacoes: Cot
   for (const i of sortItens(itens)) {
     if (i.tipo_preco === "cotacao") {
       const nc = cotacoes.filter((c) => c.item_id === i.id && Number(c.valor) > 0).length;
-      if (nc < 3) poucasCot.push(i);
+      if (nc === 0 && n(i.material_unit) + n(i.mo_unit) > 0) poucasCot.push(i);
     }
     if (n(i.quantidade) === 0) semQtd.push(i);
     else if (n(i.material_unit) + n(i.mo_unit) === 0) semPreco.push(i);
@@ -329,8 +329,8 @@ export function auditar(evf: Evf, itens: Item[], caps: Capitulo[], cotacoes: Cot
   if (poucasCot.length)
     out.push({
       nivel: "medio",
-      titulo: `${poucasCot.length} ${poucasCot.length === 1 ? "item com" : "itens com"} menos de 3 cotações`,
-      detalhe: `Itens por cotação devem ter 3 propostas para comparação: ${lista(poucasCot)}.`,
+      titulo: `${poucasCot.length} ${poucasCot.length === 1 ? "item comprado" : "itens comprados"} sem nenhuma cotação`,
+      detalhe: `O preço foi digitado sem fonte. Registre ao menos uma cotação (loja, valor, link): ${lista(poucasCot)}.`,
     });
   const demo = caps.find((c) => /demoli/i.test(c.nome));
   if (demo) {
