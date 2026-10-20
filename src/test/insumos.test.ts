@@ -67,6 +67,23 @@ describe("lista de materiais", () => {
     expect(l.map((x) => x.insumo)).not.toContain("telha_ceramica");
   });
 
+  it("drywall de banheiro usa chapa RU e traz estrutura, parafusos, fita e massa", () => {
+    const c = consumoDoItem(
+      item("Parede divisória em drywall RU – Banheiro", "drywall_parede", 10, {
+        capitulo_codigo: 20,
+      }),
+    );
+    const q = Object.fromEntries(c.map((x) => [x.insumo, x.qtd]));
+    expect(q["chapa_drywall_ru"]).toBeCloseTo(9.7, 5);
+    expect(q["chapa_drywall"]).toBeUndefined();
+    expect(q["montante_drywall"]).toBeCloseTo(25, 5);
+    expect(q["parafuso_chapa"]).toBe(300);
+    expect(q["massa_drywall"]).toBeCloseTo(7, 5);
+    const sala = consumoDoItem(item("Parede em drywall – Sala", "drywall_parede", 10));
+    expect(sala.some((x) => x.insumo === "chapa_drywall")).toBe(true);
+    expect(sala.some((x) => x.insumo === "chapa_drywall_ru")).toBe(false);
+  });
+
   it("telha só conta quando é cerâmica", () => {
     expect(consumoDoItem(item("Telhamento em telha de fibrocimento", "telhamento", 100))).toEqual(
       [],

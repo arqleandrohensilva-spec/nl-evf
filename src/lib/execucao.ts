@@ -302,6 +302,21 @@ export const EXECUCAO: Record<string, ComoSeFaz> = {
     passos: ["Medir depois do revestimento.", "Instalar perfis e vidro, vedar com silicone."],
     cuidados: ["Piso do box com caimento para o ralo do box."],
   },
+  drywall_parede: {
+    passos: [
+      "Marcar a parede no piso e no teto; banda acústica sob as guias.",
+      "Fixar as guias com bucha e parafuso e encaixar os montantes a cada 40 cm.",
+      "Montar os reforços: montantes duplos e verga no vão da porta; chapa metálica ou madeira tratada atrás de barras, bancos, dispensers e cabides.",
+      "Passar as instalações e colocar a lã mineral no miolo.",
+      "Parafusar as chapas (RU em área úmida) nas duas faces, com juntas desencontradas.",
+      "Fita e massa nas juntas; cantoneira nas quinas e na ponta livre.",
+    ],
+    cuidados: [
+      "Em área molhada, impermeabilizar a base (faixa de cerca de 30 cm) ou fazer um rodapé de alvenaria baixo.",
+      "Revestimento cerâmico sobre drywall: argamassa AC-III.",
+      "Drywall sozinho não segura barra de apoio: o reforço interno é obrigatório.",
+    ],
+  },
   alvenaria: {
     passos: ["Marcar a primeira fiada.", "Assentar com prumo e nível.", "Encunhar após 7 dias."],
     cuidados: ["Vergas e contravergas em todos os vãos."],

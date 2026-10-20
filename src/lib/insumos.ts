@@ -64,6 +64,48 @@ export const INSUMOS: Record<string, Insumo> = {
     un: "m",
     emb: { qtd: 3, nome: "barra 3 m" },
   },
+  chapa_drywall_ru: { nome: "Chapa de drywall RU (verde) 12,5 mm 1,20×1,80", un: "un" },
+  montante_drywall: {
+    nome: "Montante para drywall (48 ou 70 mm)",
+    un: "m",
+    emb: { qtd: 3, nome: "barra 3 m" },
+  },
+  guia_drywall: {
+    nome: "Guia para drywall (48 ou 70 mm)",
+    un: "m",
+    emb: { qtd: 3, nome: "barra 3 m" },
+  },
+  banda_acustica: {
+    nome: "Banda acústica sob as guias",
+    un: "m",
+    emb: { qtd: 30, nome: "rolo 30 m" },
+  },
+  bucha_guia: {
+    nome: "Bucha e parafuso para fixar as guias",
+    un: "un",
+    emb: { qtd: 100, nome: "caixa 100" },
+  },
+  parafuso_chapa: {
+    nome: "Parafuso chapa-perfil (TA 25)",
+    un: "un",
+    emb: { qtd: 1000, nome: "caixa 1000" },
+  },
+  parafuso_perfil: {
+    nome: "Parafuso perfil-perfil (LA 13)",
+    un: "un",
+    emb: { qtd: 1000, nome: "caixa 1000" },
+  },
+  fita_drywall: {
+    nome: "Fita para juntas de drywall",
+    un: "m",
+    emb: { qtd: 150, nome: "rolo 150 m" },
+  },
+  massa_drywall: {
+    nome: "Massa para juntas de drywall",
+    un: "kg",
+    emb: { qtd: 15, nome: "balde 15 kg" },
+  },
+  la_mineral: { nome: "Lã mineral (isolamento acústico)", un: "m²" },
   telha_ceramica: { nome: "Telha cerâmica", un: "un" },
 };
 
@@ -73,6 +115,8 @@ interface Consumo {
   coef: number;
   /** Aplica a perda % do item (placas, peças). */
   perda?: boolean;
+  /** Só entra quando a descrição do item combinar (ex.: chapa RU em área úmida). */
+  se?: RegExp;
 }
 
 interface Composicao {
@@ -273,10 +317,19 @@ export const COMPOSICOES: Record<string, Composicao> = {
     ],
   },
   drywall_parede: {
-    nota: "Duas faces: chapas 0,98 un/m² e perfis 2,2 m/m².",
+    nota: "Duas faces de chapa 1,20 × 1,80 + 5% (0,97 un/m²; RU quando a descrição fala em RU, umidade ou banheiro); montantes a cada 40 cm (2,5 m/m²); guias no piso e no teto (0,9 m/m²) com banda acústica; 30 parafusos de chapa e 3 de perfil por m²; fita 1,5 m e massa 0,7 kg por m²; lã mineral no miolo. Reforços para porta, barras e bancos e a impermeabilização da base ficam à parte.",
     itens: [
-      { insumo: "chapa_drywall", coef: 0.98 },
-      { insumo: "perfil_drywall", coef: 2.2 },
+      { insumo: "chapa_drywall", coef: 0.97, se: /^(?!.*\b(ru|umidade|banheiro)\b)/ },
+      { insumo: "chapa_drywall_ru", coef: 0.97, se: /\b(ru|umidade|banheiro)\b/ },
+      { insumo: "montante_drywall", coef: 2.5 },
+      { insumo: "guia_drywall", coef: 0.9 },
+      { insumo: "banda_acustica", coef: 0.9 },
+      { insumo: "bucha_guia", coef: 1.5 },
+      { insumo: "parafuso_chapa", coef: 30 },
+      { insumo: "parafuso_perfil", coef: 3 },
+      { insumo: "fita_drywall", coef: 1.5 },
+      { insumo: "massa_drywall", coef: 0.7 },
+      { insumo: "la_mineral", coef: 1 },
     ],
   },
   telhamento: {
@@ -309,7 +362,10 @@ export function consumoDoItem(i: Item): ConsumoItem[] {
   if (!c) return [];
   const q = n(i.quantidade);
   const perda = 1 + n(i.perda_pct) / 100;
-  return c.comp.itens.map((x) => ({ insumo: x.insumo, qtd: q * x.coef * (x.perda ? perda : 1) }));
+  const desc = normaliza(i.descricao);
+  return c.comp.itens
+    .filter((x) => !x.se || x.se.test(desc))
+    .map((x) => ({ insumo: x.insumo, qtd: q * x.coef * (x.perda ? perda : 1) }));
 }
 
 export interface LinhaMaterial {
