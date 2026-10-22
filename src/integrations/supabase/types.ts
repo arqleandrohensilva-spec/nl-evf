@@ -196,6 +196,7 @@ export type Database = {
         Row: {
           programa: Json | null
           propostas_equipe: Json
+          sem_gestao: boolean
           descricao_obra: string | null
           sugestoes_ignoradas: Json
           area_m2: number
@@ -216,6 +217,7 @@ export type Database = {
         Insert: {
           programa?: Json | null
           propostas_equipe?: Json
+          sem_gestao?: boolean
           descricao_obra?: string | null
           sugestoes_ignoradas?: Json
           area_m2?: number
@@ -236,6 +238,7 @@ export type Database = {
         Update: {
           programa?: Json | null
           propostas_equipe?: Json
+          sem_gestao?: boolean
           descricao_obra?: string | null
           sugestoes_ignoradas?: Json
           area_m2?: number

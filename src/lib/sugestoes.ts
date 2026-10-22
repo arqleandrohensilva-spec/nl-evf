@@ -148,6 +148,7 @@ export function sugerir(evf: Evf, itens: Item[], ambientes: Ambiente[]): Sugesta
 
   for (const c of CHECKLIST) {
     if (!(c.tipos.includes("*") || c.tipos.includes(evf.tipo_obra))) continue;
+    if (evf.sem_gestao && c.sugere === "gestao_mensal") continue;
     if (temNaObra(c.precisa)) continue;
     const svc = SERVICO[c.sugere];
     if (!svc) continue;

@@ -125,3 +125,26 @@ describe("orçamento por ambiente", () => {
     expect(r.linhas.reduce((s, l) => s + l.rateio, 0)).toBeCloseTo(r.geral?.geral ?? 0, 6);
   });
 });
+
+describe("capsDoEvf", () => {
+  it("zera as taxas quando a obra é sem gestão do escritório", async () => {
+    const { capsDoEvf, resumo } = await import("@/lib/calc");
+    const caps = [{ id: "c4", codigo: 4, nome: "Demolições", ordem: 1, taxa_adm_pct: 25 }];
+    const itens = [
+      {
+        id: "i",
+        evf_id: "e",
+        capitulo_codigo: 4,
+        codigo: "4.1",
+        ordem: 1,
+        quantidade: 1,
+        perda_pct: 0,
+        material_unit: 0,
+        mo_unit: 100,
+      },
+    ] as never[];
+    expect(resumo(itens, capsDoEvf(caps, { sem_gestao: false })).geral).toBe(125);
+    expect(resumo(itens, capsDoEvf(caps, { sem_gestao: true })).geral).toBe(100);
+    expect(caps[0]?.taxa_adm_pct).toBe(25);
+  });
+});

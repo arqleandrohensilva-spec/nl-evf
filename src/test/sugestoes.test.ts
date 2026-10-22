@@ -21,6 +21,7 @@ const evf = (tipo: string): Evf => ({
   descricao_obra: null,
   programa: null,
   propostas_equipe: {},
+  sem_gestao: false,
 });
 
 const amb = (id: string, nome: string, c = 0, l = 0, pd = 2.6, vaos = 0): Ambiente => ({

@@ -5,9 +5,11 @@ import { Kpi } from "./cells";
 import type { EvfData } from "./useEvfData";
 
 export function ResumoTab({ d }: { d: EvfData }) {
-  const { evf, itens, caps, config, todosItens, filtro, ambientes } = d;
+  const { evf, itens, caps, capsBase, config, todosItens, filtro, ambientes, mEvf } = d;
   const res = useMemo(() => resumo(itens, caps), [itens, caps]);
   const resTodos = useMemo(() => resumo(todosItens, caps), [todosItens, caps]);
+  /** O mesmo EVF com as taxas da tabela do escritório (cenário com a nossa gestão). */
+  const comGestao = useMemo(() => resumo(itens, capsBase), [itens, capsBase]);
   const [ratear, setRatear] = useState(false);
   const pa = useMemo(
     () => porAmbiente(todosItens, caps, ambientes, ratear),
@@ -67,12 +69,45 @@ export function ResumoTab({ d }: { d: EvfData }) {
             />
           </>
         )}
-        <Kpi
-          titulo="Taxa efetiva"
-          valor={fmtPct(res.taxaEfetiva)}
-          nota={`${fmtR(res.taxas)} sobre o custo direto`}
-        />
+        {evf.sem_gestao ? (
+          <Kpi
+            titulo="Com a gestão do escritório"
+            valor={fmtR(comGestao.geral)}
+            nota={`+${fmtR(comGestao.taxas)} de taxas (${fmtPct(comGestao.taxaEfetiva)} sobre o custo direto)`}
+          />
+        ) : (
+          <Kpi
+            titulo="Taxa efetiva"
+            valor={fmtPct(res.taxaEfetiva)}
+            nota={`${fmtR(res.taxas)} sobre o custo direto`}
+          />
+        )}
       </div>
+
+      {!nomeFiltro ? (
+        <section
+          className="card flex flex-wrap items-center justify-between gap-3 p-4"
+          aria-label="Gestão do escritório"
+        >
+          <div className="min-w-[16rem] flex-1">
+            <h2 className="font-semibold">Gestão da obra pelo escritório</h2>
+            <p className="text-sm text-muted-foreground">
+              {evf.sem_gestao
+                ? `Sem a nossa gestão: o EVF não leva taxas de administração. Com a gestão, o total seria ${fmtR(comGestao.geral)}.`
+                : `Com a nossa gestão: as taxas de administração por capítulo somam ${fmtR(res.taxas)}. Desligue se o cliente for contratar a obra direto.`}
+            </p>
+          </div>
+          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              className="size-5 accent-primary"
+              checked={!evf.sem_gestao}
+              onChange={(e) => mEvf.update.mutate({ id: evf.id, sem_gestao: !e.target.checked })}
+            />
+            Incluir a gestão do escritório
+          </label>
+        </section>
+      ) : null}
 
       {!nomeFiltro && Number(evf.area_m2) > 0 ? (
         <CustoPorM2

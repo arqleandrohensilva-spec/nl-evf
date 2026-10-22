@@ -45,6 +45,15 @@ export function sortItens(itens: Item[]) {
   );
 }
 
+/**
+ * Capítulos com as taxas valendo para este EVF. Obra sem a gestão do escritório
+ * (evf.sem_gestao) não leva taxa de administração: todas ficam em 0 %.
+ */
+export function capsDoEvf(caps: Capitulo[], evf: Pick<Evf, "sem_gestao"> | null | undefined) {
+  if (!evf?.sem_gestao) return caps;
+  return caps.map((c) => ({ ...c, taxa_adm_pct: 0 }));
+}
+
 export interface CapResumo {
   cap: Capitulo | undefined;
   codigo: number;

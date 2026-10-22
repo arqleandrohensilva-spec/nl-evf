@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { run, useAllItens, useCapitulos, useConfig, useEvfs } from "@/lib/data";
-import { resumo } from "@/lib/calc";
+import { capsDoEvf, resumo } from "@/lib/calc";
 import { fmtData, fmtPct, fmtR } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { EvfFormDialog } from "@/components/evf/EvfForm";
@@ -75,7 +75,7 @@ function Page() {
             {evfs.map((e) => {
               const r = resumo(
                 itens.filter((i) => i.evf_id === e.id),
-                caps,
+                capsDoEvf(caps, e),
               );
               const t = Number(e.target);
               const d = t ? ((r.geral - t) / t) * 100 : 0;
