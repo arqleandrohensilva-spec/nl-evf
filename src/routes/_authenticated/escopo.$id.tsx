@@ -214,6 +214,11 @@ function Page() {
             <li>Proteger pisos, peças e áreas que permanecem; limpeza ao fim de cada dia.</li>
             <li>Entulho ensacado e levado para a caçamba (fornecida pela obra).</li>
             <li>Ferramentas e equipamentos de uso pessoal e EPI por conta do profissional.</li>
+            <li>
+              Desligamento e religação de água e energia só com aviso prévio ao síndico e no horário
+              combinado com o condomínio.
+            </li>
+            <li>Pisos novos (granilite) protegidos depois de prontos, até o fim da obra.</li>
             <li>Serviço não listado aqui é combinado à parte, antes de executar.</li>
           </ul>
         </section>
