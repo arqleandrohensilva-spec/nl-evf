@@ -26,6 +26,9 @@ function Page() {
   const d = useEvfData(id);
   const { evf, config, ambientes } = d;
   const [comoFaz, setComoFaz] = useState(true);
+  /** Por padrão o documento não mostra o nome da obra (o profissional não precisa saber de quem é). */
+  const [mostrarObra, setMostrarObra] = useState(false);
+  const [local, setLocal] = useState<string | null>(null);
   const todas = useMemo(() => porEquipe(d.itens), [d.itens]);
   const linha = todas.find((l) => l.equipe.id === eq);
   /** O que outras equipes fazem: entra como "fora do escopo" para a empreiteira saber. */
@@ -55,6 +58,23 @@ function Page() {
         </Link>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
+            Local no documento
+            <input
+              className="h-9 w-64 rounded-md border px-2"
+              value={local ?? evf.cidade_uf ?? ""}
+              onChange={(e) => setLocal(e.target.value)}
+              placeholder="Bairro, cidade - UF"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={mostrarObra}
+              onChange={(e) => setMostrarObra(e.target.checked)}
+            />
+            Mostrar o nome da obra
+          </label>
+          <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={comoFaz}
@@ -78,12 +98,16 @@ function Page() {
             <div className="mt-1 text-base">{equipe?.nome ?? eq}</div>
           </div>
           <dl className="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 text-right text-xs">
-            <dt className="text-muted-foreground">Obra</dt>
-            <dd>{evf.obra}</dd>
-            {evf.cidade_uf ? (
+            {mostrarObra ? (
+              <>
+                <dt className="text-muted-foreground">Obra</dt>
+                <dd>{evf.obra}</dd>
+              </>
+            ) : null}
+            {(local ?? evf.cidade_uf) ? (
               <>
                 <dt className="text-muted-foreground">Local</dt>
-                <dd>{evf.cidade_uf}</dd>
+                <dd>{local ?? evf.cidade_uf}</dd>
               </>
             ) : null}
             <dt className="text-muted-foreground">Data</dt>
